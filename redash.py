@@ -107,13 +107,13 @@ if __name__ == '__main__':
     redash_url = os.environ.get('REDASH_URL')
     redash = Redash(redash_url, api_key)
 
-    print redash.test_credentials()
-    #print redash.queries()['count']
-    #print len(redash.paginate(redash.queries))
+    print(redash.test_credentials())
+    #print(redash.queries()['count'])
+    #print(len(redash.paginate(redash.queries)))
     scheduled_queries = redash.scheduled_queries()
 
     query = scheduled_queries[0]
-    print query['schedule']
+    print(query['schedule'])
     new_schedule = query['schedule'].copy()
     new_schedule['until'] = '2019-04-24'
 
