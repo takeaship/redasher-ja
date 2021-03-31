@@ -17,7 +17,11 @@ class Redash(object):
         except requests.exceptions.HTTPError:
             return False
 
-    def queries(self, page=1, page_size=25):
+    def users(self):
+        """GET api/users"""
+        return self._paginated_get('api/users')
+
+    def queries(self):
         """GET api/queries"""
         return self._paginated_get('api/queries')
 
