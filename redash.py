@@ -1,6 +1,8 @@
 # https://gist.githubusercontent.com/arikfr/91ce854f358b8d0cef60dcd1bfb60bf3/raw/ebdf6db2b19b3479901183325e2a840155c4abbe/redash.py
 import requests
 import os
+from decorator import decorator
+import itertools
 
 class Redash(object):
     def __init__(self, redash_url, api_key):
@@ -17,15 +19,19 @@ class Redash(object):
 
     def queries(self, page=1, page_size=25):
         """GET api/queries"""
-        return self._get('api/queries', params=dict(page=page, page_size=page_size)).json()
+        return self._paginated_get('api/queries')
 
-    def dashboards(self, page=1, page_size=25):
+    def dashboards(self):
         """GET api/dashboards"""
-        return self._get('api/dashboards', params=dict(page=page, page_size=page_size)).json()
+        return self._paginated_get('api/dashboards')
 
     def dashboard(self, slug):
         """GET api/dashboards/{slug}"""
         return self._get('api/dashboards/{}'.format(slug)).json()
+
+    def query(self, id):
+        """GET api/dashboards/{id}"""
+        return self._get('api/queries/{}'.format(id)).json()
 
     def create_dashboard(self, name):
         return self._post('api/dashboards', json={'name': name}).json()
@@ -63,31 +69,23 @@ class Redash(object):
 
     def scheduled_queries(self):
         """Loads all queries and returns only the scheduled ones."""
-        queries = self.paginate(self.queries)
-        return filter(lambda query: query['schedule'] is not None, queries)
+        return (query for query in self.queries() if query['schedule'] is not None)
 
     def update_query(self, query_id, data):
         """POST /api/queries/{query_id} with the provided data object."""
         path = 'api/queries/{}'.format(query_id)
         return self._post(path, json=data)
 
-    def paginate(self, resource):
-        """Load all items of a paginated resource"""
-        stop_loading = False
-        page = 1
-        page_size = 100
-
-        items = []
-
-        while not stop_loading:
-            response =  resource(page=page, page_size=page_size)
-
-            items += response['results']
-            page += 1
-
-            stop_loading = response['page'] * response['page_size'] >= response['count']
-
-        return items
+    def _paginated_get(self, path, **kwds):
+        page_size=100
+        for page in itertools.count(1):
+            response =  self._get(path, params=dict(kwds,
+                page=page,
+                page_size=page_size,
+            )).json()
+            yield from response['results']
+            if response['page'] * response['page_size'] >= response['count']:
+                break
 
     def _get(self, path, **kwargs):
         return self._request('GET', path, **kwargs)
@@ -108,9 +106,8 @@ if __name__ == '__main__':
     redash = Redash(redash_url, api_key)
 
     print(redash.test_credentials())
-    #print(redash.queries()['count'])
-    #print(len(redash.paginate(redash.queries)))
-    scheduled_queries = redash.scheduled_queries()
+    print(len(list(redash.queries())))
+    scheduled_queries = list(redash.scheduled_queries())
 
     query = scheduled_queries[0]
     print(query['schedule'])
