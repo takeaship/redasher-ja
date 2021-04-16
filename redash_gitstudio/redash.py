@@ -50,6 +50,16 @@ class Redash(object):
         }
         return self._post('api/queries', json=data).json()
 
+    def create_visualization(self, query_id, type, name, description, options):
+        data = {
+            "name": name,
+            "description": description,
+            "options": options,
+            "type": type,
+            "query_id": query_id,
+        }
+        return self._post('api/visualizations', json=data).json()
+
     def create_dashboard(self, name):
         return self._post('api/dashboards', json={'name': name}).json()
 
