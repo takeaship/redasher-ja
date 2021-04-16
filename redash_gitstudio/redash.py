@@ -37,6 +37,19 @@ class Redash(object):
         """GET api/dashboards/{id}"""
         return self._get('api/queries/{}'.format(id)).json()
 
+    def create_query(self, data_source_id, query, is_draft, is_archived, schedule, name, description, options, **kwds):
+        data = {
+            "data_source_id": data_source_id,
+            "query": query,
+            "is_archived": is_archived,
+            "is_draft": is_draft,
+            "schedule": schedule,
+            "description": description,
+            "name": name,
+            "options": options,
+        }
+        return self._post('api/queries', json=data).json()
+
     def create_dashboard(self, name):
         return self._post('api/dashboards', json={'name': name}).json()
 
