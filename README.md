@@ -1,4 +1,4 @@
-# REDASH Git Studio
+# REDASH Git Studio (WIP)
 
 The purpose of this tool is to serialize [Redash](http://redash.io) objects
 into the filesystem so that they can be maintained using tools like Git.
