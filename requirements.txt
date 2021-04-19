@@ -1,0 +1,6 @@
+click
+requests
+yamlns
+python-slugify
+consolemsg
+packaging
