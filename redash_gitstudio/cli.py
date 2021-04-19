@@ -114,11 +114,13 @@ def checkout(servername):
         del query.id
         del query.user
         del query.last_modified_by
-        query_text = query.pop('query')
+        query_text = query.pop('query', None)
         visualizations = query.pop('visualizations',[])
         query.dump(querypath/'metadata.yaml')
 
-        (querypath/'query.sql').write_text(query_text, encoding='utf8')
+        if query_text is not None:
+            (querypath/'query.sql').write_text(query_text, encoding='utf8')
+
         for vis in visualizations:
             vis = ns(vis)
             step("Exporting visualization {id} {type} {name}", **vis)
