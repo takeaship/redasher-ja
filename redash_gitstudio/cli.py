@@ -138,10 +138,10 @@ def checkout(servername):
         visualizations = query.pop('visualizations',[])
         datasource_id = query.get('data_source_id', None)
         if datasource_id:
-            ds_path = mapper.get('datasource', datasource_id)
-            query.data_source_id = ds_path
-            if not ds_path:
+            datasourcepath = mapper.get('datasource', datasource_id)
+            if not datasourcepath:
                 warn("Query refers missing data source '{}'". datasource_id)
+            query.data_source_id = datasourcepath
 
         for parameter in query.get('options', {}).get('parameters', []):
             if 'queryId' not in parameter: continue
