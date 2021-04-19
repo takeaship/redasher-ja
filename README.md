@@ -9,9 +9,9 @@ This is useful, for example, to make and test changes in a development  environm
 and eventually apply those changes into a production one.
 
 
-## The serialization format
+## Design
 
-(Proposal)
+### The serialization format (proposal)
 
 ```
 /servers/  # contains server configurations and id object mappings
@@ -25,6 +25,21 @@ and eventually apply those changes into a production one.
 /queries/<name>/visualization/<name>.yaml
 ```
 
+### Considerations
 
+- Users are not to be maintained (unless you force it)
+- Thus, creation and modification users are not kept
+- Object creation and modification dates are not to be kept
+- Groups?
+- Data sources are mapped as well but not updated
+
+### Operations (proposal)
+
+
+```bash
+rdgs setup testing http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
+rdgs default testing
+rdgs checkout
+```
 
 
