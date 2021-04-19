@@ -130,7 +130,25 @@ def checkout(servername):
     dashboardspath = repopath / 'dashboards'
     dashboardspath.mkdir(exist_ok=True)
     for dashboard in redash.dashboards():
-        step("Exporting dashboard: {id} - {name}", **dashboard)
+        step("Exporting dashboard: {slug} - {name}", **dashboard)
+        dashboard = ns(redash.dashboard(dashboard['slug'])) # TODO: id in new redash version
+        dashboardpath = mapper.track('dashboard', repopath/'dashboards', dashboard)
+        del dashboard.id
+        del dashboard.user
+        del dashboard.user_id
+        widgets = dashboard.pop('widgets',[])
+        dashboardpath.mkdir(parents=True, exist_ok=True)
+        dashboard.dump(dashboardpath/'metadata.yaml')
+        for widget in widgets:
+            widget = ns(widget)
+            widgetpath = mapper.track('widget', dashboardpath/'widgets', widget, suffix='.yaml')
+            vis = widget.pop('visualization', None)
+            del widget.id
+            del widget.dashboard_id
+            if vis:
+                widget.visualization = mapper.get('visualization', vis['id'])
+            widgetpath.parent.mkdir(parents=True, exist_ok=True)
+            ns(widget).dump(widgetpath)
 
 class Mapper(object):
     """Keeps track of the binding among objects in a server
@@ -167,7 +185,7 @@ class Mapper(object):
         objects = maps.setdefault(type, ns())
         if anObject.id in objects:
             return Path(objects[anObject.id])
-        for slug in self._slugger(anObject.name):
+        for slug in self._slugger(anObject.get('name', type)):
             objecPath = basePath / (prefix+slug+suffix)
             if not objecPath.exists(): break
         objects[anObject.id] = str(objecPath)
@@ -182,6 +200,11 @@ class Mapper(object):
         objects = maps.setdefault(type, ns())
         objects[id] = str(path)
         self._save(maps)
+
+    def get(self, type, id):
+        maps = self._load()
+        objects = maps.setdefault(type, ns())
+        return objects.get(id)
 
 
 
