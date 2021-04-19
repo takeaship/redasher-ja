@@ -2,11 +2,11 @@
 __version__ = '0.1'
 
 import click
-from yamlns import namespace as ns
-from .redash import Redash
-from consolemsg import out, step
 from pathlib import Path
-from slugify import slugify
+from yamlns import namespace as ns
+from consolemsg import out, step
+from .redash import Redash
+from .mapper import Mapper
 
 
 config = ns.load("config.yaml")
@@ -164,62 +164,6 @@ def checkout(servername):
                 widget.visualization = mapper.get('visualization', vis['id'])
             widgetpath.parent.mkdir(parents=True, exist_ok=True)
             ns(widget).dump(widgetpath)
-
-class Mapper(object):
-    """Keeps track of the binding among objects in a server
-    and a file path.
-    """
-    def __init__(self, repopath, servername):
-        self.repopath = repopath
-        self.servername = servername
-        self.mapfile = self.repopath/'maps'/'{}.yaml'.format(servername)
-
-    def _load(self):
-        if not self.mapfile.exists():
-            return ns()
-        return ns.load(self.mapfile)
-
-    def _save(self, content):
-        self.mapfile.parent.mkdir(exist_ok=True)
-        content.dump(self.mapfile)
-
-    def _slugger(self, base):
-        "Returns first the slug as is, then adding sequence numbers"
-        slug = slugify(base)
-        from itertools import count
-        yield slug
-        for c in count(2):
-            yield slug + "-{}".format(c)
-
-    def track(self, type, basePath, anObject, prefix='', suffix=''):
-        """
-        Lookups in the server if the object id already has a file mapping.
-        If not, looks one that does not exists and returns the path.
-        """
-        maps = self._load()
-        objects = maps.setdefault(type, ns())
-        if anObject.id in objects:
-            return Path(objects[anObject.id])
-        for slug in self._slugger(anObject.get('name', type)):
-            objecPath = basePath / (prefix+slug+suffix)
-            if not objecPath.exists(): break
-        objects[anObject.id] = str(objecPath)
-        self._save(maps)
-        return objecPath
-
-    def bind(self, type, id, path):
-        """
-        Binds an object id to the path for the server
-        """
-        maps = self._load()
-        objects = maps.setdefault(type, ns())
-        objects[id] = str(path)
-        self._save(maps)
-
-    def get(self, type, id):
-        maps = self._load()
-        objects = maps.setdefault(type, ns())
-        return objects.get(id)
 
 
 if __name__=='__main__':
