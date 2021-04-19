@@ -111,6 +111,7 @@ def checkout(servername):
         querypath = mapper.track('query', repopath/'queries', query)
         querypath.mkdir(parents=True, exist_ok=True)
 
+        del query.id
         del query.user
         del query.last_modified_by
         query_text = query.pop('query')
