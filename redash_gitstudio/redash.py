@@ -17,6 +17,9 @@ class Redash(object):
         except requests.exceptions.HTTPError:
             return False
 
+    def status(self):
+        return self._get('status.json').json()
+
     def users(self):
         """GET api/users"""
         return self._paginated_get('api/users')

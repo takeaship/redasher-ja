@@ -5,6 +5,7 @@ import click
 from pathlib import Path
 from yamlns import namespace as ns
 from consolemsg import out, step
+from packaging import version
 from .redash import Redash
 from .mapper import Mapper
 
@@ -101,6 +102,9 @@ def checkout(servername):
     repopath = Path('.')
     mapper = Mapper(repopath, servername)
 
+    status = ns(redash.status())
+    dashboard_with_slugs = version.parse(status.version) < version.parse('9-alpha')
+
     queriespath = repopath / 'queries'
     queriespath.mkdir(exist_ok=True)
 
@@ -141,12 +145,11 @@ def checkout(servername):
             parameter.queryId = mapper.get('query', parameter.queryId)
         query.dump(queryMetaFile)
 
-
     dashboardspath = repopath / 'dashboards'
     dashboardspath.mkdir(exist_ok=True)
     for dashboard in redash.dashboards():
         step("Exporting dashboard: {slug} - {name}", **dashboard)
-        dashboard = ns(redash.dashboard(dashboard['slug'])) # TODO: id in new redash version
+        dashboard = ns(redash.dashboard(dashboard['slug' if dashboard_with_slugs else 'id']))
         dashboardpath = mapper.track('dashboard', repopath/'dashboards', dashboard)
         del dashboard.id
         del dashboard.user
