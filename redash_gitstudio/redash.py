@@ -32,6 +32,14 @@ class Redash(object):
         """GET api/dashboards"""
         return self._paginated_get('api/dashboards')
 
+    def datasources(self):
+        """GET api/data_sources"""
+        return self._get('api/data_sources').json()
+
+    def datasource(self, id):
+        """GET api/data_sources/{id}"""
+        return self._get('api/data_sources/{}'.format(id)).json()
+
     def dashboard(self, slug):
         """GET api/dashboards/{slug}"""
         return self._get('api/dashboards/{}'.format(slug)).json()

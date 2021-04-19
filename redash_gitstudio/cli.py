@@ -4,7 +4,7 @@ __version__ = '0.1'
 import click
 from pathlib import Path
 from yamlns import namespace as ns
-from consolemsg import out, step
+from consolemsg import out, warn, step
 from packaging import version
 from .redash import Redash
 from .mapper import Mapper
@@ -105,6 +105,20 @@ def checkout(servername):
     status = ns(redash.status())
     dashboard_with_slugs = version.parse(status.version) < version.parse('9-alpha')
 
+    datasourcespath = repopath / 'datasources'
+    datasourcespath.mkdir(exist_ok=True)
+
+    for datasource in redash.datasources():
+        step("Exporting data source: {id} - {name}", **datasource)
+        datasource = ns(redash.datasource(datasource['id'])) # full content
+        datasourcepath = mapper.track('datasource', datasourcespath, datasource, suffix='.yaml')
+
+        del datasource.id
+        del datasource.groups
+        del datasource.queue_name
+        del datasource.scheduled_queue_name
+        datasource.dump(datasourcepath)
+
     queriespath = repopath / 'queries'
     queriespath.mkdir(exist_ok=True)
 
@@ -122,6 +136,12 @@ def checkout(servername):
         del query.last_modified_by
         query_text = query.pop('query', None)
         visualizations = query.pop('visualizations',[])
+        datasource_id = query.get('data_source_id', None)
+        if datasource_id:
+            ds_path = mapper.get('datasource', datasource_id)
+            query.data_source_id = ds_path
+            if not ds_path:
+                warn("Query refers missing data source '{}'". datasource_id)
 
         for parameter in query.get('options', {}).get('parameters', []):
             if 'queryId' not in parameter: continue
