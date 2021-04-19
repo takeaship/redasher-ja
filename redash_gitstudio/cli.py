@@ -104,6 +104,8 @@ def checkout(servername):
     queriespath = repopath / 'queries'
     queriespath.mkdir(exist_ok=True)
 
+    toreview = []
+
     for query in redash.queries():
         step("Exporting query: {id} - {name}", **query)
         query = ns(redash.query(query['id'])) # full content
@@ -116,6 +118,11 @@ def checkout(servername):
         del query.last_modified_by
         query_text = query.pop('query', None)
         visualizations = query.pop('visualizations',[])
+
+        for parameter in query.get('options', {}).get('parameters', []):
+            if 'queryId' not in parameter: continue
+            toreview.append(querypath/'metadata.yaml')
+
         query.dump(querypath/'metadata.yaml')
 
         if query_text is not None:
@@ -126,6 +133,14 @@ def checkout(servername):
             step("Exporting visualization {id} {type} {name}", **vis)
             vispath = mapper.track('visualization', querypath, vis, 'vis-', '.yaml')
             vis.dump(vispath)
+
+    for queryMetaFile in toreview:
+        query = ns.load(queryMetaFile)
+        for parameter in query.get('options', {}).get('parameters', []):
+            if 'queryId' not in parameter: continue
+            parameter.queryId = mapper.get('query', parameter.queryId)
+        query.dump(queryMetaFile)
+
 
     dashboardspath = repopath / 'dashboards'
     dashboardspath.mkdir(exist_ok=True)
@@ -205,14 +220,6 @@ class Mapper(object):
         maps = self._load()
         objects = maps.setdefault(type, ns())
         return objects.get(id)
-
-
-
-
-
-
-    
-    
 
 
 if __name__=='__main__':
