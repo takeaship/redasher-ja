@@ -4,3 +4,4 @@ yamlns
 python-slugify
 consolemsg
 packaging
+decorator
