@@ -8,9 +8,13 @@ from consolemsg import out, warn, step
 from packaging import version
 from .redash import Redash
 from .mapper import Mapper
+from .repo import (
+    serverConfig,
+    setServerConfig,
+    setDefaultServer,
+)
 
 
-config = ns.load("config.yaml")
 
 @click.group()
 @click.help_option()
@@ -20,6 +24,7 @@ def cli():
 
 @cli.command('list')
 def _list():
+    config = serverConfig()
     redash = Redash(config.url, config.apikey)
     for dashboard in redash.dashboards():
         dashboard = ns(dashboard)
@@ -28,6 +33,7 @@ def _list():
 @cli.command()
 @click.argument('id')
 def pull(id):
+    config = serverConfig()
     redash = Redash(config.url, config.apikey)
     dashboard = ns(redash.dashboard(id))
     dashboard.dump("{}.yaml".format(dashboard.slug))
@@ -36,6 +42,7 @@ def pull(id):
 
 @cli.command()
 def qlist():
+    config = serverConfig()
     redash = Redash(config.url, config.apikey)
     for query in redash.queries():
         query = ns(query)
@@ -44,6 +51,7 @@ def qlist():
 
 @cli.command()
 def ulist():
+    config = serverConfig()
     redash = Redash(config.url, config.apikey)
     for user in redash.users():
         user = ns(user)
@@ -53,6 +61,7 @@ def ulist():
 @click.argument('id')
 def qpull(id):
     """Retrieve a query"""
+    config = serverConfig()
     redash = Redash(config.url, config.apikey)
     query = ns(redash.query(id))
     #query.dump("{}.yaml".format(query.slug))
@@ -72,23 +81,16 @@ def qpull(id):
     #help="User API key to be used to access the server",
 )
 def setup(servername, url, apikey):
-    configfile = Path('config.yaml')
-    config = ns.load(configfile) if configfile.exists else ns()
-    servers = config.setdefault('servers', ns())
-    servers[servername] = ns(
-        url=url,
-        apikey=apikey,
-    )
-    config.setdefault('defaultserver', servername)
-    config.dump(configfile)
+    setServerConfig(servername, url, apikey)
 
+@cli.command()
+@click.argument(
+    "servername",
+    #help="The name of the server",
+)
+def default(servername):
+    setDefaultServer(servername)
 
-def serverConfig(servername=None):
-    configfile = Path('config.yaml')
-    config = ns.load(configfile) if configfile.exists else ns()
-    servername = servername or config.get('defaultserver')
-    servers = config.setdefault('servers', ns())
-    return servers.get(servername)
 
 @cli.command()
 @click.argument(
