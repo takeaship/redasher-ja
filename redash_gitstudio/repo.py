@@ -41,7 +41,6 @@ def setDefaultServer(servername):
 
 def defaultServer():
     config = loadConfig()
-    servers = config.setdefault('servers', ns())
     return config.get('defaultserver', None)
 
 

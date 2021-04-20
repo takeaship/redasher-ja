@@ -73,18 +73,25 @@ def qpull(id):
 @click.argument("url")
 @click.argument("apikey")
 def setup(servername, url, apikey):
-    """Configures a Redash server with the given SERVERNAME.
+    """Configures a Redash server to work with.
 
-    URL is the base url for the server API.
+    SERVERNAME is the name setup for the server.
+    URL is the base url for the server.
     APIKEY is the validation key related to the user
-    is going to interact with the server.
+    the program is going to act in behalf on.
+
+    If no default server has been configured this
+    server will be considered default.
     """
     setServerConfig(servername, url, apikey)
 
 @cli.command()
 @click.argument("servername", required=False)
 def default(servername=None):
-    """Sets SERVERNAME as the default server to work on"""
+    """Sets or shows the default server name to work with.
+
+    Shows instead of setting it, if no SERVERNAME is provided.
+    """
     if servername:
         setDefaultServer(servername)
         return

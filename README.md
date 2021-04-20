@@ -9,6 +9,36 @@ This is useful, for example, to make and test changes in a development  environm
 and eventually apply those changes into a production one.
 
 
+## Usage
+
+
+```bash
+# Define a server, will create a config.yaml file
+# DO NOT COMMIT config.yaml it contains the API key
+rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
+
+# set 'dev' the default server
+rds default dev
+
+# Download all objects from dev
+rds checkout
+
+# define a second server 'prod'
+rds setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
+
+# Data sources are not uploaded for safety, so
+# in order to transfer objects from one server to another,
+# you must create them by hand in the target and then bind
+# the id to the file object.
+# This command, binds datasource id 3 in 'prod'
+# with the datasource file object datasource/my-database.yaml
+# exported from 'dev'
+rds bind prod datasource/my-database.yaml 3
+
+```
+
+
+
 ## Design
 
 ### The serialization format (proposal)
