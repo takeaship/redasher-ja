@@ -31,13 +31,18 @@ def setDefaultServer(servername):
     config = loadConfig()
     servers = config.setdefault('servers', ns())
     if servername not in servers:
-        fail("No server named '{}' configured.".format(servername) + (
+        fail("Server '{}' not setup.".format(servername) + (
             " Try with {}".format(
                 ', '.join(servers))
             if servers else
             " None defined."))
     config.defaultserver = servername
     config.dump(configfile)
+
+def defaultServer():
+    config = loadConfig()
+    servers = config.setdefault('servers', ns())
+    return config.get('defaultserver', None)
 
 
 

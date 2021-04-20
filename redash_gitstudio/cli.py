@@ -4,13 +4,14 @@ __version__ = '0.1'
 import click
 from pathlib import Path
 from yamlns import namespace as ns
-from consolemsg import out, warn, step
+from consolemsg import out, warn, step, fail
 from packaging import version
 from .redash import Redash
 from .mapper import Mapper
 from .repo import (
     serverConfig,
     setServerConfig,
+    defaultServer,
     setDefaultServer,
 )
 
@@ -68,28 +69,29 @@ def qpull(id):
     click.echo(query.dump())
 
 @cli.command()
-@click.argument(
-    "servername",
-    #help="The name of the server",
-)
-@click.argument(
-    "url",
-    #help="Base url of the server",
-)
-@click.argument(
-    "apikey",
-    #help="User API key to be used to access the server",
-)
+@click.argument("servername")
+@click.argument("url")
+@click.argument("apikey")
 def setup(servername, url, apikey):
+    """Configures a Redash server with the given SERVERNAME.
+
+    URL is the base url for the server API.
+    APIKEY is the validation key related to the user
+    is going to interact with the server.
+    """
     setServerConfig(servername, url, apikey)
 
 @cli.command()
-@click.argument(
-    "servername",
-    #help="The name of the server",
-)
-def default(servername):
-    setDefaultServer(servername)
+@click.argument("servername", required=False)
+def default(servername=None):
+    """Sets SERVERNAME as the default server to work on"""
+    if servername:
+        setDefaultServer(servername)
+        return
+    servername = defaultServer()
+    if not servername:
+        fail("No default server defined")
+    print(servername)
 
 
 @cli.command()
@@ -99,6 +101,7 @@ def default(servername):
     #help="The name of the server",
 )
 def checkout(servername):
+    """Downloads all objects from a Redash server"""
     config = serverConfig(servername)
     redash = Redash(config.url, config.apikey)
     repopath = Path('.')
