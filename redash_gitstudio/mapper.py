@@ -38,11 +38,11 @@ class Mapper(object):
         if anObject.id in objects:
             return Path(objects[anObject.id])
         for slug in self._slugger(anObject.get('name', type)):
-            objecPath = basePath / (prefix+slug+suffix)
-            if not objecPath.exists(): break
-        objects[anObject.id] = str(objecPath)
+            objectPath = basePath / (prefix+slug+suffix)
+            if not objectPath.exists(): break
+        objects[anObject.id] = str(objectPath)
         self._save(maps)
-        return objecPath
+        return objectPath
 
     def bind(self, type, id, path):
         """
