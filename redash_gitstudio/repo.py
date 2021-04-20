@@ -27,6 +27,10 @@ def setServerConfig(servername, url, apikey):
     config.setdefault('defaultserver', servername)
     config.dump(configfile)
 
+def defaultServer():
+    config = loadConfig()
+    return config.get('defaultserver', None)
+
 def setDefaultServer(servername):
     config = loadConfig()
     servers = config.setdefault('servers', ns())
@@ -39,9 +43,6 @@ def setDefaultServer(servername):
     config.defaultserver = servername
     config.dump(configfile)
 
-def defaultServer():
-    config = loadConfig()
-    return config.get('defaultserver', None)
 
 
 
