@@ -30,15 +30,15 @@ rds checkout prod
 This will create some folder structure in the current directory:
 
 ```
-/maps/
-/maps/prod.yaml # contains `prod` server object id mappings to local files
-/dashboards/<name>.yaml
-/dashboards/<name>/widgets/<name>.yaml
-/queries/<name>/config.yaml
-/queries/<name>/query.sql # The query string file
-/queries/<name>/metadata.yaml # The rest of the metadata
-/queries/<name>/visualization/
-/queries/<name>/visualization/<name>.yaml
+config.yaml
+maps/
+maps/prod.yaml # contains `prod` server object id mappings to local files
+dashboards/<name>.yaml
+dashboards/<name>/widgets/<name>.yaml
+queries/<name>/query.sql # The query string file
+queries/<name>/metadata.yaml # The rest of the metadata
+queries/<name>/visualization/
+queries/<name>/visualization/<name>.yaml
 ```
 
 If you modify those files, you can update a dashboard and all depending objects
