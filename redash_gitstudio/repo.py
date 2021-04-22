@@ -106,7 +106,8 @@ def checkoutAll(servername):
         for vis in visualizations:
             vis = ns(vis)
             step("Exporting visualization {id} {type} {name}", **vis)
-            vispath = mapper.track('visualization', querypath, vis, 'vis-', '.yaml')
+            vispath = mapper.track('visualization', querypath/'visualizations', vis, suffix='.yaml')
+            vispath.parent.mkdir(parents=True, exist_ok=True)
             vis.dump(vispath)
 
     for queryMetaFile in toreview:
