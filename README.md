@@ -21,28 +21,28 @@ rds setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
 This will create a file config.yaml in the current directory.
 **DO NOT COMMIT `config.yaml`!** to a public git repository since it contains API key.
 
-Then lets download all the object from `prod`
+Then lets download all the objects from `prod`
 
 ```bash
 rds checkout prod
 ```
 
-This will create some folder structure in the current directory:
+This will create the following directory structure in the current directory:
 
 ```
 config.yaml
 maps/
-maps/prod.yaml # local object files map to object ids in `prod` server
-dashboards/<name>.yaml
-dashboards/<name>/widgets/<name>.yaml
+maps/prod.yaml # mappings from local files to object ids in `prod` server
+dashboards/<name>.yaml # dashboards metadata
+dashboards/<name>/widgets/<name>.yaml # dashboard widgets
 queries/<name>/query.sql # The query string file
 queries/<name>/metadata.yaml # The rest of the metadata
-queries/<name>/visualization/
-queries/<name>/visualization/<name>.yaml
+queries/<name>/visualization/<name>.yaml # query visualizatons
 ```
 
-You can add those file to a version control system like git,
-and keep track of your object changes in redash.
+You can put those files under the wing of a version control system like git,
+and keep track of your object changes in redash
+by running checkout and committing resulting files at any step.
 
 You can also modify the content of those files
 and then upload them back to the server:
@@ -52,8 +52,8 @@ rds upload prod dashboard/my-dashboard
 ```
 
 Another common workflow is working with an internal server
-to develop without disturbing production users and then
-synchronize them.
+to develop without disturbing production users and
+synchronize when you are done with the changes.
 
 For that you must define a new server:
 
@@ -61,13 +61,11 @@ For that you must define a new server:
 rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
 ```
 
-Datasource objects are considered readonly.
-You have to define them first in your second server,
-pointing to an equivalent database or API.
-Then you can use the following command to relate
-the object file exported from the first server
-to the id of the new datasource created on the second server.
-
+Redash datasource objects are considered readonly.
+If you want to synchronize two servers, first you must
+manually bind the datasource file object
+checked out from the first server, to the
+id of an equivalent datasource you created in the second server.
 
 ```bash
 rds bind dev datasource/my-database.yaml 3
@@ -79,14 +77,16 @@ Then you can upload the objects to create them.
 rds upload dev dashboard/my-dashboard
 ```
 
-By uploading it again you will be updating them.
+From now on, succesive file uploads to the new server
+will be updates on the same objects.
+
 
 ## Understanding maps/
 
 The directory `maps` contains a file for each server.
 Such files relates server object id's to file objects.
-Such a relation is set every time you checkout an object,
-or any time you upload an object for the first time into a server.
+Such a relation is set the first time you checkout an object from a server,
+or the first time you upload an object into a server and thus creating a new object.
 
 When you upload a file object to a server.
 If the file object already has a bound id on the server,
@@ -95,6 +95,9 @@ Otherwise a new object is created.
 
 You can also set a server mapping by hand with the `bind` subcommand
 like in the previous example with the datasource.
+
+If you checkout an object from a server with no previous mapping,
+a new file name 
 
 
 ## Design
