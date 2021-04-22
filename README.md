@@ -11,29 +11,85 @@ and eventually apply those changes into a production one.
 
 ## Usage
 
+Lets start by defining our production server, by setting up the base url
+and the API key of the user we will use to interact.
 
 ```bash
-# Define a server, will create a config.yaml file
-# DO NOT COMMIT config.yaml it contains the API key
 rds setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
-
-# Download all objects from prod
-rds checkout prod
-
-# define a second server 'dev'
-rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
-
-# Data sources are not uploaded for safety, so
-# in order to transfer objects from one server to another,
-# you must create them by hand in the target and then bind
-# the id to the file object.
-# This command, binds datasource id 3 in 'prod'
-# with the datasource file object datasource/my-database.yaml
-# exported from 'dev'
-rds bind prod datasource/my-database.yaml 3
-
 ```
 
+This will create a file config.yaml in the current directory.
+**DO NOT COMMIT `config.yaml`!** to a public git repository since it contains API key.
+
+Then lets download all the object from `prod`
+
+```bash
+rds checkout prod
+```
+
+This will create some folder structure in the current directory:
+
+```
+/maps/
+/maps/prod.yaml # contains `prod` server object id mappings to local files
+/dashboards/<name>.yaml
+/dashboards/<name>/widgets/<name>.yaml
+/queries/<name>/config.yaml
+/queries/<name>/query.sql # The query string file
+/queries/<name>/metadata.yaml # The rest of the metadata
+/queries/<name>/visualization/
+/queries/<name>/visualization/<name>.yaml
+```
+
+If you modify those files, you can update a dashboard and all depending objects
+with:
+
+```bash
+rds upload dev dashboard/my-dashboard
+```
+
+You can also upload the objects into a internal redash server to develop
+without disturbing production users.
+First, you must define a new server:
+
+```bash
+rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
+```
+
+Datasource objects are considered readonly.
+You have to define them first in your second server,
+pointing to an equivalent database or API.
+Then you can use the following command to relate
+the object file exported from the first server
+to the id of the new datasource created on the second server.
+
+
+```bash
+rds bind dev datasource/my-database.yaml 3
+```
+
+Then you can upload the objects to create them.
+
+```bash
+rds upload dev dashboard/my-dashboard
+```
+
+By uploading it again you will be updating them.
+
+## Understanding maps/
+
+The directory `maps` contains a file for each server.
+Such files relates server object id's to file objects.
+Such a relation is set every time you checkout an object,
+or any time you upload an object for the first time into a server.
+
+When you upload a file object to a server.
+If the file object already has a bound id on the server,
+the object is updated.
+Otherwise a new object is created.
+
+You can also set a server mapping by hand with the `bind` subcommand
+like in the previous example with the datasource.
 
 
 ## Design
