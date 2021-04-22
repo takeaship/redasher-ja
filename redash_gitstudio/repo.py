@@ -18,7 +18,7 @@ def serverConfig(servername=None):
     config = loadConfig()
     servername = servername or config.get('defaultserver')
     servers = config.setdefault('servers', ns())
-    return servers.get(servername)
+    return ns(servers.get(servername), name=servername)
 
 def setServerConfig(servername, url, apikey):
     config = loadConfig()
@@ -51,7 +51,7 @@ def checkoutAll(servername):
     config = serverConfig(servername)
     redash = Redash(config.url, config.apikey)
     repopath = Path('.')
-    mapper = Mapper(repopath, servername)
+    mapper = Mapper(repopath, config.name)
 
     status = ns(redash.status())
     dashboard_with_slugs = version.parse(status.version) < version.parse('9-alpha')
