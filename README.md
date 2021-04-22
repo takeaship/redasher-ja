@@ -32,7 +32,7 @@ This will create some folder structure in the current directory:
 ```
 config.yaml
 maps/
-maps/prod.yaml # contains `prod` server object id mappings to local files
+maps/prod.yaml # local object files map to object ids in `prod` server
 dashboards/<name>.yaml
 dashboards/<name>/widgets/<name>.yaml
 queries/<name>/query.sql # The query string file
@@ -41,16 +41,21 @@ queries/<name>/visualization/
 queries/<name>/visualization/<name>.yaml
 ```
 
-If you modify those files, you can update a dashboard and all depending objects
-with:
+You can add those file to a version control system like git,
+and keep track of your object changes in redash.
+
+You can also modify the content of those files
+and then upload them back to the server:
 
 ```bash
-rds upload dev dashboard/my-dashboard
+rds upload prod dashboard/my-dashboard
 ```
 
-You can also upload the objects into a internal redash server to develop
-without disturbing production users.
-First, you must define a new server:
+Another common workflow is working with an internal server
+to develop without disturbing production users and then
+synchronize them.
+
+For that you must define a new server:
 
 ```bash
 rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
