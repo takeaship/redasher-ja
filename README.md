@@ -15,16 +15,13 @@ and eventually apply those changes into a production one.
 ```bash
 # Define a server, will create a config.yaml file
 # DO NOT COMMIT config.yaml it contains the API key
-rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
-
-# set 'dev' the default server
-rds default dev
-
-# Download all objects from dev
-rds checkout
-
-# define a second server 'prod'
 rds setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
+
+# Download all objects from prod
+rds checkout prod
+
+# define a second server 'dev'
+rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
 
 # Data sources are not uploaded for safety, so
 # in order to transfer objects from one server to another,
@@ -44,10 +41,10 @@ rds bind prod datasource/my-database.yaml 3
 ### The serialization format (proposal)
 
 ```
-/servers/  # contains server configurations and id object mappings
-/servers/<name>.yaml # contains server configurations and id object mappings
+/maps/  # contains server configurations and id object mappings
+/maps/<name>.yaml # contains server configurations and id object mappings
 /dashboards/<name>.yaml
-/dashboards/<name>-widget-<name>.yaml
+/dashboards/<name>/widgets/<name>.yaml
 /queries/<name>/config.yaml
 /queries/<name>/query.sql
 /queries/<name>/query.yaml
@@ -55,21 +52,20 @@ rds bind prod datasource/my-database.yaml 3
 /queries/<name>/visualization/<name>.yaml
 ```
 
-### Considerations
+### Design forces
 
-- Users are not to be maintained (unless you force it)
+- While production object mapping should be part of a shared repository,
+  private development servers might have sense for a single person.
+  So, file-id maps should be in different files for each file so you can
+  decide which servers are shared in a repository.
+- Server configuration is not to be committed, apikey should be kept private
+  thus separated from the server id map.
+- Users might be different in production and testing, a dashboard could
+  be created using a different user.
 - Thus, creation and modification users are not kept
-- Object creation and modification dates are not to be kept
+- Object creation and modification dates are not to be kept, or do they (just to compare update times)
 - Groups?
-- Data sources are mapped as well but not updated
+- Data sources are mapped as well but not updated on upload
 
-### Operations (proposal)
-
-
-```bash
-rdgs setup testing http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
-rdgs default testing
-rdgs checkout
-```
 
 
