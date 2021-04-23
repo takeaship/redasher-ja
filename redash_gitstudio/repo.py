@@ -4,10 +4,11 @@ from pathlib import Path
 from packaging import version
 from yamlns import namespace as ns
 from consolemsg import fail, step
+from appdirs import user_config_dir
 from .redash import Redash
 from .mapper import Mapper
 
-configfile = Path('config.yaml')
+configfile = Path(user_config_dir('redash_gitstudio'),'config.yaml')
 
 def loadConfig():
     if not configfile.exists():
@@ -18,6 +19,13 @@ def serverConfig(servername=None):
     config = loadConfig()
     servername = servername or config.get('defaultserver')
     servers = config.setdefault('servers', ns())
+    if not servers:
+        fail("No server defined. Use setup subcommand.")
+    server = servers.get(servername)
+    if not server:
+        fail("No such server `{}`. Try with {}.".format(
+            servername, ', '.join(servers.keys())
+        ))
     return ns(servers.get(servername), name=servername)
 
 def setServerConfig(servername, url, apikey):
@@ -28,6 +36,7 @@ def setServerConfig(servername, url, apikey):
         apikey=apikey,
     )
     config.setdefault('defaultserver', servername)
+    configfile.parent.mkdir(exist_ok=True)
     config.dump(configfile)
 
 def defaultServer():
@@ -44,6 +53,7 @@ def setDefaultServer(servername):
             if servers else
             " None defined."))
     config.defaultserver = servername
+    configfile.parent.mkdir(exist_ok=True)
     config.dump(configfile)
 
 

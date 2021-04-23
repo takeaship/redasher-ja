@@ -5,3 +5,4 @@ python-slugify
 consolemsg
 packaging
 decorator
+appdirs
