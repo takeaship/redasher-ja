@@ -84,7 +84,7 @@ will be updates on the same objects.
 ## Understanding maps/
 
 The directory `maps` contains a file for each server.
-Such files relates server object id's to file objects.
+Such files relate server object id's to file objects.
 Such a relation is set the first time you checkout an object from a server,
 or the first time you upload an object into a server and thus creating a new object.
 
@@ -93,11 +93,15 @@ If the file object already has a bound id on the server,
 the object is updated.
 Otherwise a new object is created.
 
+Likewise, whenever you checkout an object from a server,
+if the map exists, the content will be dump in the same file.
+If not, a proper file name will be generated based on the slug
+of the current object name.
+If the name already exists a serial number is added.
+
 You can also set a server mapping by hand with the `bind` subcommand
 like in the previous example with the datasource.
 
-If you checkout an object from a server with no previous mapping,
-a new file name 
 
 
 ## Design
