@@ -18,8 +18,7 @@ and the API key of the user we will use to interact.
 rds setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
 ```
 
-This will create a file config.yaml in the current directory.
-**DO NOT COMMIT `config.yaml`!** to a public git repository since it contains API key.
+A configuration file in `~/.config/redash_gitstudio/config.yaml` will be created.
 
 Then lets download all the objects from `prod`
 
@@ -30,7 +29,6 @@ rds checkout prod
 This will create the following directory structure in the current directory:
 
 ```
-config.yaml
 maps/
 maps/prod.yaml # mappings from local files to object ids in `prod` server
 dashboards/<name>.yaml # dashboards metadata
@@ -113,7 +111,6 @@ like in the previous example with the datasource.
 /maps/<name>.yaml # contains server configurations and id object mappings
 /dashboards/<name>.yaml
 /dashboards/<name>/widgets/<name>.yaml
-/queries/<name>/config.yaml
 /queries/<name>/query.sql
 /queries/<name>/query.yaml
 /queries/<name>/visualization/
