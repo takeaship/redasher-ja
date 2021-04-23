@@ -56,7 +56,6 @@ def setDefaultServer(servername):
     configfile.parent.mkdir(exist_ok=True)
     config.dump(configfile)
 
-
 _attributesToClean = dict(
     datasource = [
         'id', # server specific
@@ -105,12 +104,27 @@ def _cleanUp(object, type):
 
 def _dump(filename, content):
     filename.parent.mkdir(exist_ok=True, parents=True)
-    print(filename)
+    print(_path2type(filename), filename)
+    _cleanUp(content, _path2type(filename))
     content.dump(filename)
 
 def _write(filename, content):
     filename.parent.mkdir(exist_ok=True)
+    print(_path2type(filename), filename)
     filename.write_text(content, encoding='utf8')
+
+def _path2type(path):
+    components = path.parts
+    if components[0] == 'datasources':
+        return 'datasource'
+    if components[0] == 'dashboards':
+        if components[2] == 'widgets':
+            return 'widget'
+        return 'dashboard'
+    if components[0] == 'queries':
+        if components[2] == 'visualizations':
+            return 'visualization'
+        return 'query'
 
 def checkoutAll(servername):
     config = serverConfig(servername)
@@ -128,7 +142,6 @@ def checkoutAll(servername):
         step("Exporting data source: {id} - {name}", **datasource)
         datasource = ns(redash.datasource(datasource['id'])) # full content
         datasourcepath = mapper.track('datasource', datasourcespath, datasource, suffix='.yaml')
-        _cleanUp(datasource, 'datasource')
         _dump(datasourcepath, datasource)
 
     queriespath = repopath / 'queries'
@@ -160,7 +173,6 @@ def checkoutAll(servername):
         if query_text is not None:
             _write(querypath/'query.sql', query_text)
 
-        _cleanUp(query, 'query')
         _dump(querypath/'metadata.yaml', query)
 
 
@@ -168,7 +180,6 @@ def checkoutAll(servername):
             vis = ns(vis)
             step("Exporting visualization {id} {type} {name}", **vis)
             vispath = mapper.track('visualization', querypath/'visualizations', vis, suffix='.yaml')
-            _cleanUp(vis, 'visualization')
             _dump(vispath, vis)
 
     for queryMetaFile in toreview:
@@ -183,7 +194,6 @@ def checkoutAll(servername):
         dashboard = ns(redash.dashboard(dashboard['slug' if dashboard_with_slugs else 'id']))
         dashboardpath = mapper.track('dashboard', repopath/'dashboards', dashboard)
         widgets = dashboard.get('widgets',[])
-        _cleanUp(dashboard, 'dashboard')
         _dump(dashboardpath/'metadata.yaml', dashboard)
         for widget in widgets:
             widget = ns(widget)
@@ -191,7 +201,5 @@ def checkoutAll(servername):
             vis = widget.get('visualization', None)
             if vis:
                 widget.visualization = mapper.get('visualization', vis['id'])
-            _cleanUp(widget, 'widget')
             _dump(widgetpath, widget)
-
 
