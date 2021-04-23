@@ -23,8 +23,8 @@ def serverConfig(servername=None):
         fail("No server defined. Use setup subcommand.")
     server = servers.get(servername)
     if not server:
-        fail("No such server `{}`. Try with {}.".format(
-            servername, ', '.join(servers.keys())
+        fail("No such server `{}`. Try with '{}'.".format(
+            servername, "', '".join(servers.keys())
         ))
     return ns(servers.get(servername), name=servername)
 
@@ -48,8 +48,8 @@ def setDefaultServer(servername):
     servers = config.setdefault('servers', ns())
     if servername not in servers:
         fail("Server '{}' not setup.".format(servername) + (
-            " Try with {}".format(
-                ', '.join(servers))
+            " Try with '{}'".format(
+                "', '".join(servers))
             if servers else
             " None defined."))
     config.defaultserver = servername
