@@ -59,27 +59,40 @@ def setDefaultServer(servername):
 
 _attributesToClean = dict(
     datasource = [
-        'id',
-        'groups',
-        'queue_name',
-        'scheduled_queue_name',
+        'id', # server specific
+        'groups', # server specific
+        'queue_name', # run-time detail
+        'scheduled_queue_name', # run-time detail
+        'paused', # run-time detail
     ],
     query = [
-        'id',
-        'user',
-        'last_modified_by',
-        'visualizations',
-        'query',
+        'id', # server specific
+        'user', # server specific
+        'apikey', # server specific
+        'last_modified_by', # server specific
+        'latest_query_data_id', # run-time detail
+        'query_hash', # mutates with query content
+        'visualizations', # apart
+        'query', # apart
+        'created_at', # server specific
+        'updated_at', # TODO: might be used to prevent overwritting remote changes
     ],
     dashboard = [
-        'id',
-        'user',
-        'user_id',
-        'widgets',
+        'id', # server specific
+        'user', # server specific
+        'user_id', # server specific
+        'created_at', # server specific
+        'updated_at', # TODO: might be used to prevent overwritting remote changes
+        'widgets', # apart
     ],
     widget = [
-        'id',
-        'dashboard_id',
+        'id', # server specific
+        'dashboard_id', # redundant
+    ],
+    visualization = [
+        'id', # server specific
+        'created_at', # server specific
+        'updated_at', # TODO: might be used to prevent overwritting remote changes
     ],
 )
 
@@ -89,6 +102,15 @@ def _cleanUp(object, type):
         if attribute not in object:
             continue
         del object[attribute]
+
+def _dump(filename, content):
+    filename.parent.mkdir(exist_ok=True, parents=True)
+    print(filename)
+    content.dump(filename)
+
+def _write(filename, content):
+    filename.parent.mkdir(exist_ok=True)
+    filename.write_text(content, encoding='utf8')
 
 def checkoutAll(servername):
     config = serverConfig(servername)
@@ -107,7 +129,7 @@ def checkoutAll(servername):
         datasource = ns(redash.datasource(datasource['id'])) # full content
         datasourcepath = mapper.track('datasource', datasourcespath, datasource, suffix='.yaml')
         _cleanUp(datasource, 'datasource')
-        datasource.dump(datasourcepath)
+        _dump(datasourcepath, datasource)
 
     queriespath = repopath / 'queries'
     queriespath.mkdir(exist_ok=True)
@@ -124,7 +146,6 @@ def checkoutAll(servername):
         query_text = query.get('query', None)
         visualizations = query.get('visualizations',[])
         datasource_id = query.get('data_source_id', None)
-        _cleanUp(query, 'query')
 
         if datasource_id:
             datasourcepath = mapper.get('datasource', datasource_id)
@@ -136,43 +157,41 @@ def checkoutAll(servername):
             if 'queryId' not in parameter: continue
             toreview.append(querypath/'metadata.yaml')
 
-        query.dump(querypath/'metadata.yaml')
-
         if query_text is not None:
-            (querypath/'query.sql').write_text(query_text, encoding='utf8')
+            _write(querypath/'query.sql', query_text)
+
+        _cleanUp(query, 'query')
+        _dump(querypath/'metadata.yaml', query)
+
 
         for vis in visualizations:
             vis = ns(vis)
             step("Exporting visualization {id} {type} {name}", **vis)
             vispath = mapper.track('visualization', querypath/'visualizations', vis, suffix='.yaml')
-            vispath.parent.mkdir(parents=True, exist_ok=True)
-            vis.dump(vispath)
+            _cleanUp(vis, 'visualization')
+            _dump(vispath, vis)
 
     for queryMetaFile in toreview:
         query = ns.load(queryMetaFile)
         for parameter in query.get('options', {}).get('parameters', []):
             if 'queryId' not in parameter: continue
             parameter.queryId = mapper.get('query', parameter.queryId)
-        query.dump(queryMetaFile)
+        _dump(queryMetaFile, query)
 
-    dashboardspath = repopath / 'dashboards'
-    dashboardspath.mkdir(exist_ok=True)
     for dashboard in redash.dashboards():
         step("Exporting dashboard: {slug} - {name}", **dashboard)
         dashboard = ns(redash.dashboard(dashboard['slug' if dashboard_with_slugs else 'id']))
         dashboardpath = mapper.track('dashboard', repopath/'dashboards', dashboard)
         widgets = dashboard.get('widgets',[])
         _cleanUp(dashboard, 'dashboard')
-        dashboardpath.mkdir(parents=True, exist_ok=True)
-        dashboard.dump(dashboardpath/'metadata.yaml')
+        _dump(dashboardpath/'metadata.yaml', dashboard)
         for widget in widgets:
             widget = ns(widget)
             widgetpath = mapper.track('widget', dashboardpath/'widgets', widget, suffix='.yaml')
-            vis = widget.pop('visualization', None)
-            _cleanUp(widget, 'widget')
+            vis = widget.get('visualization', None)
             if vis:
                 widget.visualization = mapper.get('visualization', vis['id'])
-            widgetpath.parent.mkdir(parents=True, exist_ok=True)
-            ns(widget).dump(widgetpath)
+            _cleanUp(widget, 'widget')
+            _dump(widgetpath, widget)
 
 
