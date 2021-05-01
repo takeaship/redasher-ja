@@ -106,7 +106,7 @@ def default(servername=None):
 @click.argument("servername")
 @click.argument("type")
 @click.argument("file")
-@click.argument("id")
+@click.argument("id", type=int)
 def bind(servername, type, id, file):
     """Relates a file object FILE to an ID of type TYPE in SERVER"""
     configfile = serverConfig(servername)
