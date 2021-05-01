@@ -76,6 +76,7 @@ _attributesToClean = dict(
         'query', # apart
         'created_at', # server specific
         'updated_at', # TODO: might be used to prevent overwritting remote changes
+        'api_key', # server specific
     ],
     dashboard = [
         'id', # server specific
