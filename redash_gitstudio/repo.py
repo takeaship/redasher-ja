@@ -157,13 +157,14 @@ def level(type):
     def _wrap(f, *args, **kwds):
         self = args[0]
         filename = Path(args[1])
-        self.levels +=1
-        if not self._check(type, filename):
-            self.levels -=1
-            return self.mapper.remoteId(type, filename)
-        result = f(self, filename)
-        self.levels -=1
-        return result
+        try:
+            id = self.enterLevel(type, filename)
+            if id: return id
+            id = f(self, filename)
+        finally:
+            self.exitLevel(type, filename, id)
+        return id
+
     return decorator(_wrap)
 
 
@@ -174,6 +175,7 @@ class Uploader(object):
         self.servername = config.name # param might be None, this solves
         self.redash = Redash(config.url, config.apikey)
         self.mapper = Mapper(Path('.'), config.name)
+
         self.uploaded = set()
         self.levels = 0
         self.unboundDefaultVisualizations = ns()
@@ -184,6 +186,24 @@ class Uploader(object):
     def warn(self, msg, *args, **kwds):
         warn("  "*self.levels + msg, *args, **kwds)
 
+    def enterLevel(self, objecttype, filename):
+        self.levels +=1
+
+        if filename in self.uploaded:
+            #self.warn("Ignoring already uploaded {} {}", objecttype, filename)
+            return self.mapper.remoteId(objecttype, filename)
+
+        self.step("Uploading {} {}", objecttype, filename)
+        filetype = _path2type(filename)
+        if filetype != objecttype:
+            fail("{} is not a {} but a {}".format(filename, objecttype, filetype))
+
+        self.uploaded.add(filename)
+        return False
+
+    def exitLevel(self, objecttype, filename, id):
+        #self.step("Done {} {} = {}", objecttype, filename, id)
+        self.levels -=1
 
     def upload(self, *filenames):
         for filename in filenames:
@@ -207,11 +227,9 @@ class Uploader(object):
                 format(visId, view)
             )
 
-
     @level('dashboard')
     def uploadDashboard(self, filename):
 
-        filename = Path(*filename.parts[:2])
         metadatafile = filename/'metadata.yaml'
         localDashboard = ns.load(metadatafile)
 
@@ -385,20 +403,6 @@ class Uploader(object):
 
         return visId
 
-    def _check(self, objecttype, filename):
-        filename=Path(filename)
-        if filename in self.uploaded:
-            #self.warn("Ignoring already uploaded {} {}", objecttype, filename)
-            return False
-        filetype = _path2type(filename)
-        if filetype != objecttype:
-            fail("{} is not a {} but a {}".format(filename, objecttype, filetype))
-
-        self.uploaded.add(filename)
-        self.step("Uploading {} {}", objecttype, filename)
-        return True
-
-
 
 def uploadFile(servername, *filenames):
     uploader = Uploader(servername)
@@ -484,4 +488,5 @@ def checkoutAll(servername):
             if vis:
                 widget.visualization = mapper.get('visualization', vis['id'])
             _dump(widgetpath, widget)
+
 
