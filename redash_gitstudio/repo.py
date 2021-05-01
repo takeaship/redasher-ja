@@ -409,80 +409,87 @@ def uploadFile(servername, *filenames):
     uploader.upload(*filenames)
 
 def checkoutAll(servername):
-    config = serverConfig(servername)
-    redash = Redash(config.url, config.apikey)
-    repopath = Path('.')
-    mapper = Mapper(repopath, config.name)
+    Downloader(servername).checkoutAll()
 
-    status = ns(redash.status())
-    dashboard_with_slugs = version.parse(status.version) < version.parse('9-alpha')
+class Downloader(object):
+    def __init__(self, servername):
+        config = serverConfig(servername)
+        self.servername = config.name # param might be None, this solves
+        self.redash = Redash(config.url, config.apikey)
+        self.repopath = Path('.')
+        self.mapper = Mapper(self.repopath, config.name)
 
-    datasourcespath = repopath / 'datasources'
-    datasourcespath.mkdir(exist_ok=True)
+    def checkoutAll(self):
 
-    for datasource in redash.datasources():
-        step("Exporting data source: {id} - {name}", **datasource)
-        datasource = ns(redash.datasource(datasource['id'])) # full content
-        datasourcepath = mapper.track('datasource', datasourcespath, datasource, suffix='.yaml')
-        _dump(datasourcepath, datasource)
+        status = ns(self.redash.status())
+        dashboard_with_slugs = version.parse(status.version) < version.parse('9-alpha')
 
-    queriespath = repopath / 'queries'
-    queriespath.mkdir(exist_ok=True)
+        datasourcespath = self.repopath / 'datasources'
+        datasourcespath.mkdir(exist_ok=True)
 
-    toreview = []
+        for datasource in self.redash.datasources():
+            step("Exporting data source: {id} - {name}", **datasource)
+            datasource = ns(self.redash.datasource(datasource['id'])) # full content
+            datasourcepath = self.mapper.track('datasource', datasourcespath, datasource, suffix='.yaml')
+            _dump(datasourcepath, datasource)
 
-    for query in redash.queries():
-        step("Exporting query: {id} - {name}", **query)
-        query = ns(redash.query(query['id'])) # full content
+        queriespath = self.repopath / 'queries'
+        queriespath.mkdir(exist_ok=True)
 
-        querypath = mapper.track('query', repopath/'queries', query)
-        querypath.mkdir(parents=True, exist_ok=True)
+        toreview = []
 
-        query_text = query.get('query', None)
-        visualizations = query.get('visualizations',[])
-        datasource_id = query.get('data_source_id', None)
+        for query in self.redash.queries():
+            step("Exporting query: {id} - {name}", **query)
+            query = ns(self.redash.query(query['id'])) # full content
 
-        if datasource_id:
-            datasourcepath = mapper.get('datasource', datasource_id)
-            if not datasourcepath:
-                warn("Query refers missing data source '{}'". datasource_id)
-            query.data_source_id = datasourcepath
+            querypath = self.mapper.track('query', self.repopath/'queries', query)
+            querypath.mkdir(parents=True, exist_ok=True)
 
-        for parameter in query.get('options', {}).get('parameters', []):
-            if 'queryId' not in parameter: continue
-            toreview.append(querypath/'metadata.yaml')
+            query_text = query.get('query', None)
+            visualizations = query.get('visualizations',[])
+            datasource_id = query.get('data_source_id', None)
 
-        if query_text is not None:
-            _write(querypath/'query.sql', query_text)
+            if datasource_id:
+                datasourcepath = self.mapper.get('datasource', datasource_id)
+                if not datasourcepath:
+                    warn("Query refers missing data source '{}'". datasource_id)
+                query.data_source_id = datasourcepath
 
-        _dump(querypath/'metadata.yaml', query)
+            for parameter in query.get('options', {}).get('parameters', []):
+                if 'queryId' not in parameter: continue
+                toreview.append(querypath/'metadata.yaml')
+
+            if query_text is not None:
+                _write(querypath/'query.sql', query_text)
+
+            _dump(querypath/'metadata.yaml', query)
 
 
-        for vis in visualizations:
-            vis = ns(vis)
-            step("Exporting visualization {id} {type} {name}", **vis)
-            vispath = mapper.track('visualization', querypath/'visualizations', vis, suffix='.yaml')
-            _dump(vispath, vis)
+            for vis in visualizations:
+                vis = ns(vis)
+                step("Exporting visualization {id} {type} {name}", **vis)
+                vispath = self.mapper.track('visualization', querypath/'visualizations', vis, suffix='.yaml')
+                _dump(vispath, vis)
 
-    for queryMetaFile in toreview:
-        query = ns.load(queryMetaFile)
-        for parameter in query.get('options', {}).get('parameters', []):
-            if 'queryId' not in parameter: continue
-            parameter.queryId = mapper.get('query', parameter.queryId)
-        _dump(queryMetaFile, query)
+        for queryMetaFile in toreview:
+            query = ns.load(queryMetaFile)
+            for parameter in query.get('options', {}).get('parameters', []):
+                if 'queryId' not in parameter: continue
+                parameter.queryId = self.mapper.get('query', parameter.queryId)
+            _dump(queryMetaFile, query)
 
-    for dashboard in redash.dashboards():
-        step("Exporting dashboard: {slug} - {name}", **dashboard)
-        dashboard = ns(redash.dashboard(dashboard['slug' if dashboard_with_slugs else 'id']))
-        dashboardpath = mapper.track('dashboard', repopath/'dashboards', dashboard)
-        widgets = dashboard.get('widgets',[])
-        _dump(dashboardpath/'metadata.yaml', dashboard)
-        for widget in widgets:
-            widget = ns(widget)
-            widgetpath = mapper.track('widget', dashboardpath/'widgets', widget, suffix='.yaml')
-            vis = widget.get('visualization', None)
-            if vis:
-                widget.visualization = mapper.get('visualization', vis['id'])
-            _dump(widgetpath, widget)
+        for dashboard in self.redash.dashboards():
+            step("Exporting dashboard: {slug} - {name}", **dashboard)
+            dashboard = ns(self.redash.dashboard(dashboard['slug' if dashboard_with_slugs else 'id']))
+            dashboardpath = self.mapper.track('dashboard', self.repopath/'dashboards', dashboard)
+            widgets = dashboard.get('widgets',[])
+            _dump(dashboardpath/'metadata.yaml', dashboard)
+            for widget in widgets:
+                widget = ns(widget)
+                widgetpath = self.mapper.track('widget', dashboardpath/'widgets', widget, suffix='.yaml')
+                vis = widget.get('visualization', None)
+                if vis:
+                    widget.visualization = self.mapper.get('visualization', vis['id'])
+                _dump(widgetpath, widget)
 
 
