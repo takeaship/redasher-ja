@@ -271,6 +271,9 @@ class Uploader(object):
 
     @level
     def uploadDataSource(self, filename):
+        if not self._check('datasource', filename):
+            return self.mapper.remoteId('datasource', filename)
+
         dataSourceId = self.mapper.remoteId('datasource', filename)
         if dataSourceId: return dataSourceId
         # No creation is done when not found.
@@ -389,6 +392,7 @@ class Uploader(object):
         return visId
 
     def _check(self, objecttype, filename):
+        filename=Path(filename)
         if filename in self.uploaded:
             #self.warn("Ignoring already uploaded {} {}", objecttype, filename)
             return False
