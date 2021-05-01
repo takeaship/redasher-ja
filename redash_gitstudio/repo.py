@@ -149,13 +149,22 @@ def _path2type(path):
 def _read(path):
     return path.read_text(encoding='utf8')
 
+
+
 from decorator import decorator
-@decorator
-def level(f, self, *args, **kwds):
-    self.levels +=1
-    result = f(self, *args, **kwds)
-    self.levels -=1
-    return result
+
+def level(type):
+    def _wrap(f, *args, **kwds):
+        self = args[0]
+        filename = Path(args[1])
+        self.levels +=1
+        if not self._check(type, filename):
+            self.levels -=1
+            return self.mapper.remoteId(type, filename)
+        result = f(self, filename)
+        self.levels -=1
+        return result
+    return decorator(_wrap)
 
 
 
@@ -199,19 +208,17 @@ class Uploader(object):
             )
 
 
-    @level
+    @level('dashboard')
     def uploadDashboard(self, filename):
-        if not self._check('dashboard', filename):
-            return self.mapper.remoteId('dashboard', filename)
 
-        dashboardpath = Path(*filename.parts[:2])
-        metadatafile = dashboardpath/'metadata.yaml'
+        filename = Path(*filename.parts[:2])
+        metadatafile = filename/'metadata.yaml'
         localDashboard = ns.load(metadatafile)
 
-        dashboardId = self.mapper.remoteId('dashboard', dashboardpath)
+        dashboardId = self.mapper.remoteId('dashboard', filename)
         if not dashboardId:
             dashboardId = ns(self.redash.create_dashboard(localDashboard.name)).id
-            self.mapper.bind('dashboard', dashboardId, dashboardpath)
+            self.mapper.bind('dashboard', dashboardId, filename)
             self.step("Created a new dashboard {}", dashboardId)
 
         # TODO: Compare update date with last date from server
@@ -232,15 +239,13 @@ class Uploader(object):
         if dashboard_params:
             self.redash.update_dashboard(dashboardId, dashboard_params)
 
-        for widgetfile in dashboardpath.glob('widgets/*.yaml'):
+        for widgetfile in filename.glob('widgets/*.yaml'):
             self.uploadWidget(widgetfile)
 
         return dashboardId
 
-    @level
+    @level('widget')
     def uploadWidget(self, filename):
-        if not self._check('widget', filename):
-            return self.mapper.remoteId('widget', filename)
 
         widget = ns.load(filename)
         dashboardPath = Path(*filename.parts[:2])
@@ -269,11 +274,8 @@ class Uploader(object):
 
         return widgetId
 
-    @level
+    @level('datasource')
     def uploadDataSource(self, filename):
-        if not self._check('datasource', filename):
-            return self.mapper.remoteId('datasource', filename)
-
         dataSourceId = self.mapper.remoteId('datasource', filename)
         if dataSourceId: return dataSourceId
         # No creation is done when not found.
@@ -297,11 +299,8 @@ class Uploader(object):
             )
         )
 
-    @level
+    @level('query')
     def uploadQuery(self, filename):
-        filename = Path(filename)
-        if not self._check('query', filename):
-            return self.mapper.remoteId('query', filename)
         query = ns.load(filename/'metadata.yaml')
         query.query = _read(filename/'query.sql')
         dataSourceId = self.uploadDataSource(query.data_source_id)
@@ -356,13 +355,8 @@ class Uploader(object):
             )
         return visId
 
-    @level
+    @level('visualization')
     def uploadVisualization(self, filename):
-        filename = Path(filename)
-        if not self._check('visualization', filename):
-            return self.mapper.remoteId('visualization', filename)
-
-        # TODO: What if the default visualization is the first one
         queryfile = visualization2query(filename)
         queryId = self.uploadQuery(queryfile)
 
