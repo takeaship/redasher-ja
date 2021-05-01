@@ -115,7 +115,7 @@ def bind(servername, type, id, file):
     oldfile = mapper.get(type, id)
     if oldfile:
         warn("Id {} in {} was bound to {}".format(
-            id, server, oldfile
+            id, servername, oldfile
         ))
     mapper.bind(type, id, file)
 
