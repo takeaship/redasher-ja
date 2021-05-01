@@ -192,10 +192,11 @@ class Uploader(object):
         self.levels +=1
 
         if filename in self.uploaded:
-            #self.warn("Ignoring already uploaded {} {}", objecttype, filename)
+            self.step("Skipped {} {}", objecttype, filename)
             return self.mapper.remoteId(objecttype, filename)
 
-        self.step("Uploading {} {}", objecttype, filename)
+        id = self.mapper.remoteId(objecttype, filename)
+        self.step("{} {} {}", "Update" if id else "Create", objecttype, filename)
         filetype = _path2type(filename)
         if filetype != objecttype:
             fail("{} is not a {} but a {}".format(filename, objecttype, filetype))
@@ -285,12 +286,10 @@ class Uploader(object):
         )
         if widgetId:
             self.redash.update_widget(widgetId, widgetData)
-            self.step("  updated widget {}".format(widgetId))
         else:
             newwidget = ns(self.redash.create_widget(**widgetData))
             widgetId = newwidget.id
             self.mapper.bind('widget', widgetId, filename)
-            self.step("  created widget {}".format(widgetId))
 
         return widgetId
 
@@ -370,7 +369,7 @@ class Uploader(object):
         if visId:
             self.mapper.bind('visualization', visId, filename)
             self.step(
-                "visualization bound to default created one {}"
+                "Visualization bound to default created one {}"
                 .format(visId)
             )
         return visId
@@ -398,10 +397,8 @@ class Uploader(object):
         if not visId:
             visId = ns(self.redash.create_visualization(**data)).id
             self.mapper.bind('visualization', visId, filename)
-            self.step("  visualization created {}".format(visId))
         else:
             self.redash.update_visualization(visId, **data)
-            self.step("  visualization updated {}".format(visId))
 
         return visId
 
