@@ -167,6 +167,7 @@ class Uploader(object):
         self.mapper = Mapper(Path('.'), config.name)
         self.uploaded = set()
         self.levels = 0
+        self.unboundDefaultVisualizations = ns()
 
     def step(self, msg, *args, **kwds):
         step("  "*self.levels + msg, *args, **kwds)
@@ -191,6 +192,12 @@ class Uploader(object):
             if not handler:
                 fail("Unsuported file object type '{}'".format(filename))
             handler(filename)
+
+        for view, visId in self.unboundDefaultVisualizations.items():
+            warn("Unbound default TABLE visualization {} created for {}".
+                format(visId, view)
+            )
+
 
     @level
     def uploadDashboard(self, filename):
@@ -311,11 +318,13 @@ class Uploader(object):
         for parameter in query.options.get('parameters', []):
             if 'queryId' in parameter:
                 parameter.queryId = self.uploadQuery(parameter.queryId)
-        defaultVisualization = None
         if not queryId:
             remotequery = ns(self.redash.create_query(**newQuery))
             queryId = remotequery.id
-            defaultVisualization = remotequery.visualizations[0]['id']
+            self.unboundDefaultVisualization(
+                filename,
+                remotequery.visualizations[0]['id'],
+            )
             self.mapper.bind('query', queryId, filename)
             self.step("  created query {}", queryId)
         else:
@@ -326,17 +335,26 @@ class Uploader(object):
             self.step("  updated query {}", queryId)
 
         for visualizationfile in filename.glob('visualizations/*.yaml'):
-            visId = self.uploadVisualization(visualizationfile, defaultVisualization)
-            if visId == defaultVisualization:
-                defaultVisualization = None
-
-        if defaultVisualization:
-            warn("Unbound default TABLE visualization created")
+            visId = self.uploadVisualization(visualizationfile)
 
         return queryId
 
+    def unboundDefaultVisualization(self, queryfile, visId):
+        self.unboundDefaultVisualizations[queryfile]=visId
+
+    def bindDefaultVisualization(self, filename):
+        queryfile = visualization2query(filename)
+        visId = self.unboundDefaultVisualizations.pop(queryfile, None)
+        if visId:
+            self.mapper.bind('visualization', visId, filename)
+            self.step(
+                "visualization bound to default created one {}"
+                .format(visId)
+            )
+        return visId
+
     @level
-    def uploadVisualization(self, filename, defaultVisualization=None):
+    def uploadVisualization(self, filename):
         filename = Path(filename)
         if not self._check('visualization', filename):
             return self.mapper.remoteId('visualization', filename)
@@ -349,10 +367,8 @@ class Uploader(object):
         visId = self.mapper.remoteId('visualization', filename)
 
         # Bind the default created visualization
-        if not visId and defaultVisualization and visualization.type == 'TABLE':
-            self.mapper.bind('visualization', defaultVisualization, filename)
-            visId = defaultVisualization
-            self.step("  visualization bound to default one")
+        if not visId and visualization.type == 'TABLE':
+            visId = self.bindDefaultVisualization(filename)
 
         data = ns(
             query_id = queryId,
