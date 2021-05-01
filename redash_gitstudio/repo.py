@@ -123,15 +123,15 @@ def _write(filename, content):
 def _path2type(path):
     components = list(path.parts)
 
-    def has(part, position):
-        if part not in components: return False
-        return components.index(part) == position
+    def ispart(position, name):
+        if name not in components: return False
+        return components.index(name) == position
 
-    if has('datasources', 0):
+    if ispart(0, 'datasources'):
         return 'datasource'
 
-    if has('dashboards', 0):
-        if has('widgets', 2):
+    if ispart(0, 'dashboards'):
+        if ispart(2, 'widgets'):
             if len(components) != 4:
                 return None
             return 'widget'
@@ -139,8 +139,8 @@ def _path2type(path):
             return None
         return 'dashboard'
 
-    if has('queries', 0):
-        if has('visualizations', 2):
+    if ispart(0, 'queries'):
+        if ispart(2, 'visualizations'):
             if len(components) != 4:
                 return None
             return 'visualization'
@@ -159,6 +159,7 @@ def level(type):
     def _wrap(f, *args, **kwds):
         self = args[0]
         filename = Path(args[1])
+        id = None
         try:
             id = self.enterLevel(type, filename)
             if id: return id
