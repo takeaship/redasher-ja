@@ -241,7 +241,7 @@ class Uploader(object):
 
         # TODO: Compare update date with last date from server
 
-        dashboard_params = {
+        params = {
             param: localDashboard[param]
             for param in [
                 "slug",
@@ -254,8 +254,8 @@ class Uploader(object):
             ]
             if param in localDashboard
         }
-        if dashboard_params:
-            self.redash.update_dashboard(dashboardId, dashboard_params)
+        if params:
+            self.redash.update_dashboard(dashboardId, params)
 
         for widgetfile in filename.glob('widgets/*.yaml'):
             self.uploadWidget(widgetfile)
