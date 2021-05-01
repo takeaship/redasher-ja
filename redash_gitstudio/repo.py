@@ -122,6 +122,9 @@ def _write(filename, content):
     print(_path2type(filename), filename)
     filename.write_text(content, encoding='utf8')
 
+def parentObjectPath(path):
+    return Path(*path.parts[:2])
+
 def _path2type(path):
     components = list(path.parts)
 
@@ -273,7 +276,7 @@ class Uploader(object):
     def uploadWidget(self, filename):
 
         widget = ns.load(filename)
-        dashboardPath = Path(*filename.parts[:2])
+        dashboardPath = parentObjectPath(filename)
         dashboardId = self.uploadDashboard(dashboardPath)
 
         visId = (
@@ -362,7 +365,7 @@ class Uploader(object):
         self.unboundDefaultVisualizations[queryfile]=visId
 
     def bindDefaultVisualization(self, filename):
-        queryfile = visualization2query(filename)
+        queryfile = parentObjectPath(filename)
         visId = self.unboundDefaultVisualizations.pop(queryfile, None)
         if visId:
             self.mapper.bind('visualization', visId, filename)
@@ -374,7 +377,7 @@ class Uploader(object):
 
     @level('visualization')
     def uploadVisualization(self, filename):
-        queryfile = visualization2query(filename)
+        queryfile = parentObjectPath(filename)
         queryId = self.uploadQuery(queryfile)
 
         visualization = ns.load(filename)
@@ -404,10 +407,6 @@ class Uploader(object):
 def uploadFile(servername, *filenames):
     uploader = Uploader(servername)
     uploader.upload(*filenames)
-
-
-def visualization2query(path):
-    return Path(*Path(path).parts[:2])
 
 def checkoutAll(servername):
     config = serverConfig(servername)
