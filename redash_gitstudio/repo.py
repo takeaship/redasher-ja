@@ -89,6 +89,8 @@ _attributesToClean = dict(
     widget = [
         'id', # server specific
         'dashboard_id', # redundant
+        'created_at', # server specific
+        'updated_at', # TODO: might be used to prevent overwritting remote changes
     ],
     visualization = [
         'id', # server specific
