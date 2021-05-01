@@ -112,6 +112,7 @@ def _dump(filename, content):
     filetype = _path2type(normalized)
     print(filetype, filename)
     _cleanUp(content, filetype)
+    content = ns(sorted(content.items()))
     content.dump(filename)
 
 def _write(filename, content):
