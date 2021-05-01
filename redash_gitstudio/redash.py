@@ -71,21 +71,34 @@ class Redash(object):
         }
         return self._post('api/visualizations', json=data).json()
 
+    def update_visualization(self, visualization_id, query_id, type, name, description, options):
+        data = {
+            "name": name,
+            "description": description,
+            "options": options,
+            "type": type,
+            "query_id": query_id,
+        }
+        return self._post('api/visualizations/{}'.format(visualization_id), json=data).json()
+
     def create_dashboard(self, name):
         return self._post('api/dashboards', json={'name': name}).json()
 
     def update_dashboard(self, dashboard_id, properties):
         return self._post('api/dashboards/{}'.format(dashboard_id), json=properties).json()
 
-    def create_widget(self, dashboard_id, visualization_id, text, options):
+    def create_widget(self, dashboard_id, visualization_id, text, options, width=1):
         data = {
             'dashboard_id': dashboard_id,
             'visualization_id': visualization_id,
             'text': text,
             'options': options,
-            'width': 1,
+            'width': width,
         }
         return self._post('api/widgets', json=data).json()
+
+    def update_widget(self, widget_id, data):
+        return self._post('api/widgets/{}'.format(widget_id), json=data).json()
 
     def duplicate_dashboard(self, slug, new_name=None):
         current_dashboard = self.dashboard(slug)
@@ -114,6 +127,12 @@ class Redash(object):
         path = 'api/queries/{}'.format(query_id)
         return self._post(path, json=data)
 
+    def delete_dashboard(self, dashboard_id):
+        return self._delete('api/dashboard/{}'.format(dashboard_id))
+
+    def delete_query(self, query_id):
+        return self._delete('api/query/{}'.format(query_id))
+
     def _paginated_get(self, path, **kwds):
         page_size=100
         for page in itertools.count(1):
@@ -125,6 +144,9 @@ class Redash(object):
             if response['page'] * response['page_size'] >= response['count']:
                 break
 
+    def _delete(self, path, **kwargs):
+        return self._request('DELETE', path, **kwargs)
+
     def _get(self, path, **kwargs):
         return self._request('GET', path, **kwargs)
 
@@ -132,10 +154,17 @@ class Redash(object):
         return self._request('POST', path, **kwargs)
 
     def _request(self, method, path, **kwargs):
-        url = '{}/{}'.format(self.redash_url, path)
-        response = self.session.request(method, url, **kwargs)
-        response.raise_for_status()
-        return response
+        try:
+            url = '{}/{}'.format(self.redash_url, path)
+            response = self.session.request(method, url, **kwargs)
+            response.raise_for_status()
+            return response
+        except:
+            from yamlns import namespace as ns
+            print("{} {}\n{}".format(
+                method, path, ns(kwargs).dump()
+            ))
+            raise
 
 
 if __name__ == '__main__':

@@ -13,6 +13,7 @@ from .repo import (
     defaultServer,
     setDefaultServer,
     checkoutAll,
+    uploadFile,
 )
 
 
@@ -111,7 +112,7 @@ def bind(servername, type, id, file):
     configfile = serverConfig(servername)
     repopath = Path('.')
     mapper = Mapper(repopath, servername)
-    oldfile = mapper.get(typem, id)
+    oldfile = mapper.get(type, id)
     if oldfile:
         warn("Id {} in {} was bound to {}".format(
             id, server, oldfile
@@ -120,30 +121,17 @@ def bind(servername, type, id, file):
 
 
 @cli.command()
-@click.argument(
-    "servername",
-    required=False,
-)
+@click.argument("servername")
 def checkout(servername):
     """Downloads all objects from a Redash server"""
     checkoutAll(servername)
 
 @cli.command()
-@click.argument(
-    "servername",
-    required=False,
-)
-@click.argument(
-    "objectfile",
-    required=False,
-)
+@click.argument("servername")
+@click.argument("objectfile", type=Path, nargs=-1)
 def upload(servername, objectfile):
     "Upload a dashboard and all dependant objects"
-    config = serverConfig(servername)
-    redash = Redash(config.url, config.apikey)
-    repopath = Path('.')
-    mapper = Mapper(repopath, servername)
-
+    uploadFile(servername, *objectfile)
 
 
 

@@ -3,10 +3,11 @@
 from pathlib import Path
 from packaging import version
 from yamlns import namespace as ns
-from consolemsg import fail, step
+from consolemsg import fail, step, warn
 from appdirs import user_config_dir
 from .redash import Redash
 from .mapper import Mapper
+import sys
 
 configfile = Path(user_config_dir('redash_gitstudio'),'config.yaml')
 
@@ -104,8 +105,12 @@ def _cleanUp(object, type):
 
 def _dump(filename, content):
     filename.parent.mkdir(exist_ok=True, parents=True)
-    print(_path2type(filename), filename)
-    _cleanUp(content, _path2type(filename))
+    normalized = filename
+    if filename.name in ('metadata.yaml'):
+        normalized = filename.parent
+    filetype = _path2type(normalized)
+    print(filetype, filename)
+    _cleanUp(content, filetype)
     content.dump(filename)
 
 def _write(filename, content):
@@ -114,17 +119,280 @@ def _write(filename, content):
     filename.write_text(content, encoding='utf8')
 
 def _path2type(path):
-    components = path.parts
-    if components[0] == 'datasources':
+    components = list(path.parts)
+
+    def has(part, position):
+        if part not in components: return False
+        return components.index(part) == position
+
+    if has('datasources', 0):
         return 'datasource'
-    if components[0] == 'dashboards':
-        if components[2] == 'widgets':
+
+    if has('dashboards', 0):
+        if has('widgets', 2):
+            if len(components) != 4:
+                return None
             return 'widget'
+        if len(components) != 2:
+            return None
         return 'dashboard'
-    if components[0] == 'queries':
-        if components[2] == 'visualizations':
+
+    if has('queries', 0):
+        if has('visualizations', 2):
+            if len(components) != 4:
+                return None
             return 'visualization'
+        if len(components) != 2:
+            return None
         return 'query'
+
+def _read(path):
+    return path.read_text(encoding='utf8')
+
+from decorator import decorator
+@decorator
+def level(f, self, *args, **kwds):
+    self.levels +=1
+    result = f(self, *args, **kwds)
+    self.levels -=1
+    return result
+
+
+
+class Uploader(object):
+    def __init__(self, servername):
+        config = serverConfig(servername)
+        self.servername = config.name # param might be None, this solves
+        self.redash = Redash(config.url, config.apikey)
+        self.mapper = Mapper(Path('.'), config.name)
+        self.uploaded = set()
+        self.levels = 0
+
+    def step(self, msg, *args, **kwds):
+        step("  "*self.levels + msg, *args, **kwds)
+
+    def warn(self, msg, *args, **kwds):
+        warn("  "*self.levels + msg, *args, **kwds)
+
+
+    def upload(self, *filenames):
+        for filename in filenames:
+            self.step("Recursive upload starting at {}", filename)
+            filename = Path(filename)
+            if filename.name == 'metadata.yaml':
+                filename = filename.parent
+            filetype = _path2type(filename)
+            handler = dict(
+                dashboard = self.uploadDashboard,
+                query = self.uploadQuery,
+                widget = self.uploadWidget,
+                visualization = self.uploadVisualization,
+            ).get(filetype, None)
+            if not handler:
+                fail("Unsuported file object type '{}'".format(filename))
+            handler(filename)
+
+    @level
+    def uploadDashboard(self, filename):
+        if not self._check('dashboard', filename):
+            return self.mapper.remoteId('dashboard', filename)
+
+        dashboardpath = Path(*filename.parts[:2])
+        metadatafile = dashboardpath/'metadata.yaml'
+        localDashboard = ns.load(metadatafile)
+
+        dashboardId = self.mapper.remoteId('dashboard', dashboardpath)
+        if not dashboardId:
+            dashboardId = ns(self.redash.create_dashboard(localDashboard.name)).id
+            self.mapper.bind('dashboard', dashboardId, dashboardpath)
+            self.step("Created a new dashboard {}", dashboardId)
+
+        # TODO: Compare update date with last date from server
+
+        dashboard_params = {
+            param: localDashboard[param]
+            for param in [
+                "slug",
+                "tags",
+                "dashboard_filters_enabled",
+                "is_archived",
+                "is_favorite",
+                #"can_edit",
+                #"layout",
+            ]
+            if param in localDashboard
+        }
+        if dashboard_params:
+            self.redash.update_dashboard(dashboardId, dashboard_params)
+
+        for widgetfile in dashboardpath.glob('widgets/*.yaml'):
+            self.uploadWidget(widgetfile)
+
+        return dashboardId
+
+    @level
+    def uploadWidget(self, filename):
+        if not self._check('widget', filename):
+            return self.mapper.remoteId('widget', filename)
+
+        widget = ns.load(filename)
+        dashboardPath = Path(*filename.parts[:2])
+        dashboardId = self.uploadDashboard(dashboardPath)
+
+        visId = (
+            self.uploadVisualization(widget.visualization)
+            if 'visualization' in widget else None
+        )
+        widgetId = self.mapper.remoteId('widget', filename)
+        widgetData = ns(
+            dashboard_id = dashboardId,
+            visualization_id = visId,
+            text = widget.text,
+            width = widget.width,
+            options = widget.options,
+        )
+        if widgetId:
+            self.redash.update_widget(widgetId, widgetData)
+            self.step("  updated widget {}".format(widgetId))
+        else:
+            newwidget = ns(self.redash.create_widget(**widgetData))
+            widgetId = newwidget.id
+            self.mapper.bind('widget', widgetId, filename)
+            self.step("  created widget {}".format(widgetId))
+
+        return widgetId
+
+    @level
+    def uploadDataSource(self, filename):
+        dataSourceId = self.mapper.remoteId('datasource', filename)
+        if dataSourceId: return dataSourceId
+        # No creation is done when not found.
+        # Data sources are defined differently on each server,
+        # so it must be done by hand.
+        available = "\n".join(
+            "  {id}: {name}".format(**ns(ds))
+            for ds in self.redash.datasources()
+            ) or "No data source available yet in the server."
+        fail(
+            "Data source {filename} is not bound to any sources on server '{server}'.\n"
+            "You might want to choose or create one in the server "
+            "and bind it with the following command:\n"
+            "  {command} bind {server} datasource {filename} <id>\n"
+            "Available data sources are:\n{available}"
+            .format(
+                command=sys.argv[0],
+                filename=filename,
+                server=self.servername,
+                available=available,
+            )
+        )
+
+    @level
+    def uploadQuery(self, filename):
+        filename = Path(filename)
+        if not self._check('query', filename):
+            return self.mapper.remoteId('query', filename)
+        query = ns.load(filename/'metadata.yaml')
+        query.query = _read(filename/'query.sql')
+        dataSourceId = self.uploadDataSource(query.data_source_id)
+        queryId = self.mapper.remoteId('query', filename)
+        newQuery = ns(
+            name = query.name,
+            description = query.description,
+            data_source_id = dataSourceId,
+            query = query.query,
+            schedule = query.schedule,
+            is_archived = query.is_archived,
+            is_draft = query.is_draft,
+            options = query.options,
+            tags = query.tags,
+        )
+
+        for parameter in query.options.get('parameters', []):
+            if 'queryId' in parameter:
+                parameter.queryId = self.uploadQuery(parameter.queryId)
+        defaultVisualization = None
+        if not queryId:
+            remotequery = ns(self.redash.create_query(**newQuery))
+            queryId = remotequery.id
+            defaultVisualization = remotequery.visualizations[0]['id']
+            self.mapper.bind('query', queryId, filename)
+            self.step("  created query {}", queryId)
+        else:
+            self.redash.update_query(
+                query_id = queryId,
+                data = newQuery
+            )
+            self.step("  updated query {}", queryId)
+
+        for visualizationfile in filename.glob('visualizations/*.yaml'):
+            visId = self.uploadVisualization(visualizationfile, defaultVisualization)
+            if visId == defaultVisualization:
+                defaultVisualization = None
+
+        if defaultVisualization:
+            warn("Unbound default TABLE visualization created")
+
+        return queryId
+
+    @level
+    def uploadVisualization(self, filename, defaultVisualization=None):
+        filename = Path(filename)
+        if not self._check('visualization', filename):
+            return self.mapper.remoteId('visualization', filename)
+
+        # TODO: What if the default visualization is the first one
+        queryfile = visualization2query(filename)
+        queryId = self.uploadQuery(queryfile)
+
+        visualization = ns.load(filename)
+        visId = self.mapper.remoteId('visualization', filename)
+
+        # Bind the default created visualization
+        if not visId and defaultVisualization and visualization.type == 'TABLE':
+            self.mapper.bind('visualization', defaultVisualization, filename)
+            visId = defaultVisualization
+            self.step("  visualization bound to default one")
+
+        data = ns(
+            query_id = queryId,
+            name = visualization.name,
+            description = visualization.description,
+            type = visualization.type,
+            options = visualization.options,
+        )
+
+        if not visId:
+            visId = ns(self.redash.create_visualization(**data)).id
+            self.mapper.bind('visualization', visId, filename)
+            self.step("  visualization created {}".format(visId))
+        else:
+            self.redash.update_visualization(visId, **data)
+            self.step("  visualization updated {}".format(visId))
+
+        return visId
+
+    def _check(self, objecttype, filename):
+        if filename in self.uploaded:
+            #self.warn("Ignoring already uploaded {} {}", objecttype, filename)
+            return False
+        filetype = _path2type(filename)
+        if filetype != objecttype:
+            fail("{} is not a {} but a {}".format(filename, objecttype, filetype))
+
+        self.uploaded.add(filename)
+        self.step("Uploading {} {}", objecttype, filename)
+        return True
+
+
+
+def uploadFile(servername, *filenames):
+    uploader = Uploader(servername)
+    uploader.upload(*filenames)
+
+
+def visualization2query(path):
+    return Path(*Path(path).parts[:2])
 
 def checkoutAll(servername):
     config = serverConfig(servername)

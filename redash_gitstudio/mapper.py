@@ -58,4 +58,10 @@ class Mapper(object):
         objects = maps.setdefault(type, ns())
         return objects.get(id)
 
+    def remoteId(self, type, path):
+        maps = self._load()
+        objects = maps.setdefault(type, ns())
+        inversemap = {v:k for k,v in objects.items()}
+        return inversemap.get(str(path), None)
+
 
