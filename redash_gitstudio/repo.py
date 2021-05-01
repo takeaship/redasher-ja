@@ -234,28 +234,29 @@ class Uploader(object):
     def uploadDashboard(self, filename):
 
         metadatafile = filename/'metadata.yaml'
-        localDashboard = ns.load(metadatafile)
+        dashboard = ns.load(metadatafile)
 
         dashboardId = self.mapper.remoteId('dashboard', filename)
         if not dashboardId:
-            dashboardId = ns(self.redash.create_dashboard(localDashboard.name)).id
+            dashboardId = ns(self.redash.create_dashboard(dashboard.name)).id
             self.mapper.bind('dashboard', dashboardId, filename)
             self.step("Created a new dashboard {}", dashboardId)
 
         # TODO: Compare update date with last date from server
 
         params = {
-            param: localDashboard[param]
+            param: dashboard[param]
             for param in [
                 "slug",
                 "tags",
                 "dashboard_filters_enabled",
                 "is_archived",
                 "is_favorite",
+                "is_draft",
                 #"can_edit",
                 #"layout",
             ]
-            if param in localDashboard
+            if param in dashboard
         }
         if params:
             self.redash.update_dashboard(dashboardId, params)
@@ -277,7 +278,7 @@ class Uploader(object):
             if 'visualization' in widget else None
         )
         widgetId = self.mapper.remoteId('widget', filename)
-        widgetData = ns(
+        params = ns(
             dashboard_id = dashboardId,
             visualization_id = visId,
             text = widget.text,
@@ -285,9 +286,9 @@ class Uploader(object):
             options = widget.options,
         )
         if widgetId:
-            self.redash.update_widget(widgetId, widgetData)
+            self.redash.update_widget(widgetId, params)
         else:
-            newwidget = ns(self.redash.create_widget(**widgetData))
+            newwidget = ns(self.redash.create_widget(**params))
             widgetId = newwidget.id
             self.mapper.bind('widget', widgetId, filename)
 
@@ -324,7 +325,7 @@ class Uploader(object):
         query.query = _read(filename/'query.sql')
         dataSourceId = self.uploadDataSource(query.data_source_id)
         queryId = self.mapper.remoteId('query', filename)
-        newQuery = ns(
+        params = ns(
             name = query.name,
             description = query.description,
             data_source_id = dataSourceId,
@@ -339,21 +340,15 @@ class Uploader(object):
         for parameter in query.options.get('parameters', []):
             if 'queryId' in parameter:
                 parameter.queryId = self.uploadQuery(parameter.queryId)
-        if not queryId:
-            remotequery = ns(self.redash.create_query(**newQuery))
-            queryId = remotequery.id
-            self.unboundDefaultVisualization(
-                filename,
-                remotequery.visualizations[0]['id'],
-            )
-            self.mapper.bind('query', queryId, filename)
-            self.step("  created query {}", queryId)
+        if queryId:
+            self.redash.update_query(queryId, params)
         else:
-            self.redash.update_query(
-                query_id = queryId,
-                data = newQuery
-            )
-            self.step("  updated query {}", queryId)
+            remotequery = ns(self.redash.create_query(**params))
+            queryId = remotequery.id
+            self.mapper.bind('query', queryId, filename)
+
+            defaultView = remotequery.visualizations[0]['id']
+            self.unboundDefaultVisualization(filename, defaultView)
 
         for visualizationfile in filename.glob('visualizations/*.yaml'):
             visId = self.uploadVisualization(visualizationfile)
@@ -386,7 +381,7 @@ class Uploader(object):
         if not visId and visualization.type == 'TABLE':
             visId = self.bindDefaultVisualization(filename)
 
-        data = ns(
+        params = ns(
             query_id = queryId,
             name = visualization.name,
             description = visualization.description,
@@ -395,10 +390,10 @@ class Uploader(object):
         )
 
         if not visId:
-            visId = ns(self.redash.create_visualization(**data)).id
+            visId = ns(self.redash.create_visualization(**params)).id
             self.mapper.bind('visualization', visId, filename)
         else:
-            self.redash.update_visualization(visId, **data)
+            self.redash.update_visualization(visId, **params)
 
         return visId
 
