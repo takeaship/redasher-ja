@@ -424,11 +424,7 @@ class Downloader(object):
         self.repopath = Path('.')
         self.mapper = Mapper(self.repopath, config.name)
 
-    def checkoutAll(self):
-
-        status = ns(self.redash.status())
-        dashboard_with_slugs = version.parse(status.version) < version.parse('9-alpha')
-
+    def checkoutDataSources(self):
         datasourcespath = self.repopath / 'datasources'
         datasourcespath.mkdir(exist_ok=True)
 
@@ -438,6 +434,7 @@ class Downloader(object):
             datasourcepath = self.mapper.track('datasource', datasourcespath, datasource, suffix='.yaml')
             _dump(datasourcepath, datasource)
 
+    def checkoutQueries(self):
         queriespath = self.repopath / 'queries'
         queriespath.mkdir(exist_ok=True)
 
@@ -483,6 +480,10 @@ class Downloader(object):
                 parameter.queryId = self.mapper.get('query', parameter.queryId)
             _dump(queryMetaFile, query)
 
+    def checkoutDashboards(self):
+        status = ns(self.redash.status())
+        dashboard_with_slugs = version.parse(status.version) < version.parse('9-alpha')
+
         for dashboard in self.redash.dashboards():
             step("Exporting dashboard: {slug} - {name}", **dashboard)
             idfield = 'slug' if dashboard_with_slugs else 'id'
@@ -498,6 +499,10 @@ class Downloader(object):
                     widget.visualization = self.mapper.get('visualization', vis['id'])
                 _dump(widgetpath, widget)
 
+    def checkoutAll(self):
+        self.checkoutDataSources()
+        self.checkoutQueries()
+        self.checkoutDashboards()
 
 
 
