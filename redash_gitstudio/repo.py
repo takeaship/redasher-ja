@@ -84,6 +84,7 @@ _attributesToClean = dict(
         'created_at', # server specific
         'updated_at', # TODO: might be used to prevent overwritting remote changes
         'widgets', # apart
+        'version', # TODO: might be used to prevent overwritting remote changes
     ],
     widget = [
         'id', # server specific
