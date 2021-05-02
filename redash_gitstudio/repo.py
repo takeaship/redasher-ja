@@ -485,7 +485,8 @@ class Downloader(object):
 
         for dashboard in self.redash.dashboards():
             step("Exporting dashboard: {slug} - {name}", **dashboard)
-            dashboard = ns(self.redash.dashboard(dashboard['slug' if dashboard_with_slugs else 'id']))
+            idfield = 'slug' if dashboard_with_slugs else 'id'
+            dashboard = ns(self.redash.dashboard(dashboard[idfield]))
             dashboardpath = self.mapper.track('dashboard', self.repopath/'dashboards', dashboard)
             widgets = dashboard.get('widgets',[])
             _dump(dashboardpath/'metadata.yaml', dashboard)
@@ -496,5 +497,9 @@ class Downloader(object):
                 if vis:
                     widget.visualization = self.mapper.get('visualization', vis['id'])
                 _dump(widgetpath, widget)
+
+
+
+
 
 
