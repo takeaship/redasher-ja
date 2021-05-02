@@ -340,7 +340,6 @@ class Uploader(object):
             is_archived = query.is_archived,
             is_draft = query.is_draft,
             options = query.options,
-            tags = query.tags,
         )
 
         for parameter in query.options.get('parameters', []):
@@ -355,6 +354,12 @@ class Uploader(object):
 
             defaultView = remotequery.visualizations[0]['id']
             self.unboundDefaultVisualization(filename, defaultView)
+
+        self.redash.update_query(queryId, ns(
+            tags = query.tags,
+            is_draft = query.is_draft,
+        ))
+
 
         for visualizationfile in filename.glob('visualizations/*.yaml'):
             visId = self.uploadVisualization(visualizationfile)
