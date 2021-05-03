@@ -108,7 +108,7 @@ like in the previous example with the datasource.
 
 ## Design
 
-### Decission Log
+### Decision Log
 
 - Sluggified names are used as object file names since they are more easily spotted than a hash
 - Sluggified names are keept even if the name of the object changes later
