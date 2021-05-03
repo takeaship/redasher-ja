@@ -1,4 +1,4 @@
-# redasher
+# Redasher
 
 This tool manages Redash objects as files,
 enabling version control and having development environments.
