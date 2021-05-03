@@ -17,7 +17,7 @@ setup(
     py_modules = [
         'redasher',
     ],
-    packages = packages=find_packages(exclude=['*[tT]est*']),
+    packages = find_packages(exclude=['*[tT]est*']),
     install_requires = read('requirements.txt').splitlines(),
     python_requires='>=3.7',
     classifiers=[
