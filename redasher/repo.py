@@ -9,7 +9,7 @@ from .redash import Redash
 from .mapper import Mapper
 import sys
 
-configfile = Path(user_config_dir('redash_gitstudio'),'config.yaml')
+configfile = Path(user_config_dir('redasher'),'config.yaml')
 
 def loadConfig():
     if not configfile.exists():
