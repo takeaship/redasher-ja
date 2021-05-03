@@ -1,10 +1,14 @@
-# REDASH Git Studio (WIP)
+# redasher
+
+This tool manages Redash objects as files,
+enabling version control and having development environments.
 
 The purpose of this tool is to serialize [Redash](http://redash.io) objects
+(dashboards, queries, visualizations...)
 into the filesystem so that they can be maintained using tools like Git.
-You might use it just to keep track of the changes, or
+You might use that to keep track of the changes with tools like git, or
 you can even modify those objects with a text editor and update your instance.
-By adding a second Redash instance you can use this tool to syncronize their objects.
+By tracking a second Redash instance you can use this tool to syncronize objects among them.
 This is useful, for example, to make and test changes in a development  environment
 and eventually apply those changes into a production one.
 
@@ -15,7 +19,7 @@ Lets start by defining our production server, by setting up the base url
 and the API key of the user we will use to interact.
 
 ```bash
-rds setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
+redasher setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
 ```
 
 A configuration file in `~/.config/redash_gitstudio/config.yaml` will be created.
@@ -23,7 +27,7 @@ A configuration file in `~/.config/redash_gitstudio/config.yaml` will be created
 Then lets download all the objects from `prod`
 
 ```bash
-rds checkout prod
+redasher checkout prod
 ```
 
 This will create the following directory structure in the current directory:
@@ -31,11 +35,11 @@ This will create the following directory structure in the current directory:
 ```
 maps/
 maps/prod.yaml # mappings from local files to object ids in `prod` server
-dashboards/<name>.yaml # dashboards metadata
+dashboards/<name>/metadata.yaml # dashboards metadata
 dashboards/<name>/widgets/<name>.yaml # dashboard widgets
 queries/<name>/query.sql # The query string file
 queries/<name>/metadata.yaml # The rest of the metadata
-queries/<name>/visualization/<name>.yaml # query visualizatons
+queries/<name>/visualizations/<name>.yaml # query visualizatons
 ```
 
 You can put those files under the wing of a version control system like git,
@@ -46,7 +50,7 @@ You can also modify the content of those files
 and then upload them back to the server:
 
 ```bash
-rds upload prod dashboard/my-dashboard
+redasher upload prod dashboard/my-dashboard
 ```
 
 Another common workflow is working with an internal server
@@ -56,7 +60,7 @@ synchronize when you are done with the changes.
 For that you must define a new server:
 
 ```bash
-rds setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
+redasher setup dev http://localhost:8080 sdfa23424dfa2xcvvr23werwcdvht
 ```
 
 Redash datasource objects are considered readonly.
@@ -66,13 +70,13 @@ checked out from the first server, to the
 id of an equivalent datasource you created in the second server.
 
 ```bash
-rds bind dev datasource/my-database.yaml 3
+redasher bind dev datasource/my-database.yaml 3
 ```
 
 Then you can upload the objects to create them.
 
 ```bash
-rds upload dev dashboard/my-dashboard
+redasher upload dev dashboard/my-dashboard
 ```
 
 From now on, succesive file uploads to the new server
@@ -104,33 +108,42 @@ like in the previous example with the datasource.
 
 ## Design
 
-### The serialization format (proposal)
+### Decission Log
 
-```
-/maps/  # contains server configurations and id object mappings
-/maps/<name>.yaml # contains server configurations and id object mappings
-/dashboards/<name>.yaml
-/dashboards/<name>/widgets/<name>.yaml
-/queries/<name>/query.sql
-/queries/<name>/query.yaml
-/queries/<name>/visualization/
-/queries/<name>/visualization/<name>.yaml
-```
-
-### Design forces
-
+- Sluggified names are used as object file names since they are more easily spotted than a hash
+- Sluggified names are keept even if the name of the object changes later
+- Non composition relations are mapped with an attribute refering the object path names instead of ids.
+  - Numeric id's from server are instance dependant
+  - A common numeric serialization id would solve that but it would be harder to search and replace
+- Composition relations (dashboard -> widgets, query -> visualizations) are
+  mapped as directory hierarchy. This eases copying objects as a whole.
+- Ids in each redash instance are different so "instance id" to "object file" maps should be tracked per instance
 - While production object mapping should be part of a shared repository,
-  private development servers might have sense for a single person.
+  private development servers might have sense for a single developer.
   So, file-id maps should be in different files for each file so you can
   decide which servers are shared in a repository.
-- Server configuration is not to be committed, apikey should be kept private
-  thus separated from the server id map.
+- Permanent mapping from id and a file object should be stablished:
+  - The first time you download a given server object with no previous bound in that server
+  - The first time you upload a file object to a given server with no previous bound in that server
+- Successive uploads and downloads should keep that binding
+  - Uploading a file object to a server where it has a bound, should update the object instead of creating it
+  - Downloading an object from a server having already a bound to a file object, overwrites the same file object
+- Data sources are mapped as well but not updated on upload, since they might point to different database configurations depending on the instance.
+  - Thus, before uploading objects refering to a datasource into a new instance,
+    it has to be created in the instance and bound using the bind command before uploading.
+- Server configuration is not to be committed, and apikey should be kept private,
+  thus it has been separated from the server id map into a user configuration file.
 - Users might be different in production and testing, a dashboard could
-  be created using a different user.
-- Thus, creation and modification users are not kept
-- Object creation and modification dates are not to be kept, or do they (just to compare update times)
-- Groups?
-- Data sources are mapped as well but not updated on upload
+  be created using a different user. 
+  Thus, creation and modification users are not kept
+- Object creation and modification dates are not to be kept, or do they? (they might be used to compare update times and detecting overwritten changes)
+
+### TODO
+
+- Alerts and destinations
+- Groups
+- Detecting overwritting changes on upload
+- git ops executed automatically
 
 
 
