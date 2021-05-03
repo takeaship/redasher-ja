@@ -137,9 +137,15 @@ like in the previous example with the datasource.
   be created using a different user. 
   Thus, creation and modification users are not kept
 - Object creation and modification dates are not to be kept, or do they? (they might be used to compare update times and detecting overwritten changes)
+- Cascading uploads
+  - Uploading a dashboard uploads all its widgets
+  - Uploading a widget uploads its dashboard and its visualization
+  - Uploading a visualization uploads its query
+  - Uploading a query uploads its datasource, its visualizations and any param query
 
 ### TODO
 
+- Partial checkouts
 - Alerts and destinations
 - Groups
 - Detecting overwritting changes on upload
