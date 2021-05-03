@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-__version__ = '0.1'
 
 import click
 from pathlib import Path
@@ -7,6 +6,7 @@ from yamlns import namespace as ns
 from consolemsg import out, warn, step, fail
 from .redash import Redash
 from .mapper import Mapper
+from . import __version__
 from .repo import (
     serverConfig,
     setServerConfig,
