@@ -4,12 +4,12 @@ from pathlib import Path
 from packaging import version
 from yamlns import namespace as ns
 from consolemsg import fail, step, warn
-from appdirs import user_config_dir
 from .redash import Redash
 from .mapper import Mapper
 import sys
+import os
 
-configfile = Path(user_config_dir('redasher'),'config.yaml')
+configfile = Path(os.getcwd(),'.redasher-ja/config.yaml')
 
 def loadConfig():
     if not configfile.exists():
