@@ -1,6 +1,6 @@
 # Redasher-ja
 
-This project was forked from [Redasher](https://github.com/Som-Energia/redasher) for Japanese-titled redash objects.
+This project was forked from [Redasher](https://github.com/Som-Energia/redasher), designed for Japanese-titled redash objects.
 
 This tool manages Redash objects as files,
 enabling version control and having development environments.
@@ -47,6 +47,15 @@ queries/<name>/visualizations/<name>.yaml # query visualizatons
 You can put those files under the wing of a version control system like git,
 and keep track of your object changes in redash
 by running checkout and committing resulting files at any step.
+
+You can checkout a single query object:
+
+```bash
+redasher checkout-query prod {query_id}
+```
+
+{query_id} is the numeric id of the query. You can find it in the url of the query page.
+
 
 You can also modify the content of those files
 and then upload them back to the server:
