@@ -29,19 +29,28 @@ A configuration file in `.redasher-ja/config.yaml` will be created.
 Then lets download all the objects from `prod`
 
 ```bash
-redasher checkout prod
+redasher checkout-all prod
 ```
 
 This will create the following directory structure in the current directory:
 
 ```
-maps/
-maps/prod.yaml # mappings from local files to object ids in `prod` server
-dashboards/<name>/metadata.yaml # dashboards metadata
-dashboards/<name>/widgets/<name>.yaml # dashboard widgets
-queries/<name>/query.sql # The query string file
-queries/<name>/metadata.yaml # The rest of the metadata
-queries/<name>/visualizations/<name>.yaml # query visualizatons
+└── your-project/
+    ├── maps/
+    │   └── prod.yaml
+    ├── datasources/
+    │   └── <name>.yaml
+    ├── queries/
+    │   └── <name>/
+    │       ├── query.sql
+    │       ├── metadata.yaml
+    │       └── visualizations/
+    │           └── <name>.yaml
+    └── dashboards/
+        └── <name>/
+            ├── metadata.yaml
+            └── widgets/
+                └── <name>.yaml
 ```
 
 You can put those files under the wing of a version control system like git,
@@ -51,10 +60,10 @@ by running checkout and committing resulting files at any step.
 You can checkout a single query object:
 
 ```bash
-redasher checkout-query prod {query_id}
+redasher checkout-query prod 12
 ```
 
-{query_id} is the numeric id of the query. You can find it in the url of the query page.
+The second argument is the numeric id of the query. You can find it in the url of the query page.
 
 
 You can also modify the content of those files
