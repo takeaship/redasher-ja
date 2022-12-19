@@ -1,4 +1,6 @@
-# Redasher
+# Redasher-ja
+
+This project was forked from [Redasher](https://github.com/Som-Energia/redasher) for Japanese-titled redash objects.
 
 This tool manages Redash objects as files,
 enabling version control and having development environments.
@@ -22,7 +24,7 @@ and the API key of the user we will use to interact.
 redasher setup prod http://redash.mycompany.com:8012 a2xcvvr23werwcdvhtsdfa23424df
 ```
 
-A configuration file in `~/.config/redash_gitstudio/config.yaml` will be created.
+A configuration file in `.redasher-ja/config.yaml` will be created.
 
 Then lets download all the objects from `prod`
 
