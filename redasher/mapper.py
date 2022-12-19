@@ -1,6 +1,7 @@
 from yamlns import namespace as ns
 from pathlib import Path
-from slugify import slugify
+import cutlet
+katsu = cutlet.Cutlet()
 
 class Mapper(object):
     """Keeps track of the binding of server objects
@@ -22,7 +23,7 @@ class Mapper(object):
 
     def _slugger(self, base):
         "Returns first the slug as is, then adding sequence numbers"
-        slug = slugify(base)
+        slug = katsu.slug(base)
         from itertools import count
         yield slug
         for c in count(2):

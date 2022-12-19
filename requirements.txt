@@ -1,8 +1,9 @@
 click
 requests
 yamlns
-python-slugify
 consolemsg
 packaging
 decorator
 appdirs
+unidic-lite
+cutlet
