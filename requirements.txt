@@ -4,6 +4,5 @@ yamlns
 consolemsg
 packaging
 decorator
-appdirs
 unidic-lite
 cutlet
