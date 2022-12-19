@@ -13,6 +13,7 @@ from .repo import (
     defaultServer,
     setDefaultServer,
     checkoutAll,
+    checkoutQuery,
     uploadFile,
 )
 
@@ -122,9 +123,16 @@ def bind(servername, type, id, file):
 
 @cli.command()
 @click.argument("servername")
-def checkout(servername):
+def checkout_all(servername):
     """Downloads all objects from a Redash server"""
     checkoutAll(servername)
+   
+@cli.command()
+@click.argument("servername")
+@click.argument("queryid")
+def checkout_query(servername, queryid):
+    """Donwloads a query from a Redash server"""
+    checkoutQuery(servername, queryid)
 
 @cli.command()
 @click.argument("servername")

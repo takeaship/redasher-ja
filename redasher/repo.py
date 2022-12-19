@@ -415,6 +415,9 @@ def uploadFile(servername, *filenames):
 
 def checkoutAll(servername):
     Downloader(servername).checkoutAll()
+    
+def checkoutQuery(servername, queryId):
+    Downloader(servername).checkoutQuery(queryId)
 
 class Downloader(object):
     def __init__(self, servername):
@@ -434,6 +437,44 @@ class Downloader(object):
             datasourcepath = self.mapper.track('datasource', datasourcespath, datasource, suffix='.yaml')
             _dump(datasourcepath, datasource)
 
+    def checkoutQuery(self, queryId):
+        datasourcespath = self.repopath / 'datasources'
+        if not datasourcespath.exists():
+            self.checkoutDataSources()
+        queriespath = self.repopath / 'queries'
+        queriespath.mkdir(exist_ok=True)
+        self._checkoutQuery(queryId)
+
+    def _checkoutQuery(self, queryId):
+        query = ns(self.redash.query(queryId))
+        step("Exporting query: {id} - {name}", **query)
+        
+        querypath = self.mapper.track('query', self.repopath/'queries', query)
+        querypath.mkdir(parents=True, exist_ok=True)
+        
+        query_text = query.get('query', None)
+        visualizations = query.get('visualizations',[])
+        datasource_id = query.get('data_source_id', None)
+        
+        if datasource_id:
+            datasourcepath = self.mapper.get('datasource', datasource_id)
+            if not datasourcepath:
+                warn("Query refers missing data source '{}'". datasource_id)
+            query.data_source_id = datasourcepath
+             
+        if query_text is not None:
+            _write(querypath/'query.sql', query_text)
+
+        _dump(querypath/'metadata.yaml', query)
+        
+        for vis in visualizations:
+            vis = ns(vis)
+            step("Exporting visualization {id} {type} {name}", **vis)
+            vispath = self.mapper.track('visualization', querypath/'visualizations', vis, suffix='.yaml')
+            _dump(vispath, vis)
+            
+        return (query, querypath)
+
     def checkoutQueries(self):
         queriespath = self.repopath / 'queries'
         queriespath.mkdir(exist_ok=True)
@@ -441,37 +482,11 @@ class Downloader(object):
         toreview = []
 
         for query in self.redash.queries():
-            step("Exporting query: {id} - {name}", **query)
-            query = ns(self.redash.query(query['id'])) # full content
-
-            querypath = self.mapper.track('query', self.repopath/'queries', query)
-            querypath.mkdir(parents=True, exist_ok=True)
-
-            query_text = query.get('query', None)
-            visualizations = query.get('visualizations',[])
-            datasource_id = query.get('data_source_id', None)
-
-            if datasource_id:
-                datasourcepath = self.mapper.get('datasource', datasource_id)
-                if not datasourcepath:
-                    warn("Query refers missing data source '{}'". datasource_id)
-                query.data_source_id = datasourcepath
+            query, querypath = self._checkoutQuery(query['id'])
 
             for parameter in query.get('options', {}).get('parameters', []):
                 if 'queryId' not in parameter: continue
                 toreview.append(querypath/'metadata.yaml')
-
-            if query_text is not None:
-                _write(querypath/'query.sql', query_text)
-
-            _dump(querypath/'metadata.yaml', query)
-
-
-            for vis in visualizations:
-                vis = ns(vis)
-                step("Exporting visualization {id} {type} {name}", **vis)
-                vispath = self.mapper.track('visualization', querypath/'visualizations', vis, suffix='.yaml')
-                _dump(vispath, vis)
 
         for queryMetaFile in toreview:
             query = ns.load(queryMetaFile)
